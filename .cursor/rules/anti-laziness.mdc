@@ -1,0 +1,44 @@
+---
+description: "Anti-laziness enforcement — implement, test, verify, document at EVERY step"
+globs:
+alwaysApply: true
+---
+
+## Anti-Laziness Protocol
+
+After EVERY implementation step, this sequence is MANDATORY:
+
+1. **IMPLEMENT** — Write the feature/code
+2. **SELF-REVIEW** — Re-read. Fix issues silently. Never present first drafts.
+3. **TEST** — Write a test proving it works. Not a stub. A REAL test.
+4. **RUN** — Execute the test. Confirm pass. Fix if fail.
+5. **DOC SYNC** — Update AGENTS.md, README, or relevant docs with new state
+6. **PROVE** — Show evidence (output, screenshot, log) before claiming done
+
+### Violation Indicators
+
+- Claiming done without running tests → STOP. Run them.
+- Empty or trivial test files → STOP. Write real assertions.
+- Docs out of sync with code → STOP. Sync them now.
+- "It should work" without evidence → STOP. Prove it.
+- Skipping error handling because "it's just a prototype" → STOP. Handle errors.
+- Implementing a checklist item without giving it depth → STOP. Make it excellent.
+
+### The Rule
+
+Every checklist item gets the same effort as if it were the ONLY thing being delivered today. Breadth does not excuse shallowness.
+
+Fulfilling a checklist is NOT the same as building a product.
+- Checklist thinking: "did I touch every file?" → mediocre
+- Product thinking: "does this feel alive, polished, integrated?" → excellent
+
+### Doc Updates Required After
+
+| After | Update |
+|-------|--------|
+| New feature implemented | README feature section |
+| Architecture decision made | AGENTS.md ADR section |
+| Test written | Test count in README |
+| Bug found and fixed | AGENTS.md workspace facts |
+| Skill/learning extracted | AGENTS.md session log |
+| Phase completed | Plan file status + AGENTS.md |

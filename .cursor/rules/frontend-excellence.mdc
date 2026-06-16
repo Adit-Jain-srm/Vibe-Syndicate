@@ -1,0 +1,103 @@
+---
+description: "Frontend excellence — animations, micro-interactions, sound design, and product-selling polish on every surface"
+globs: ["**/*.tsx", "**/*.ts", "**/*.css"]
+alwaysApply: true
+---
+
+## Frontend Excellence Protocol
+
+Selling a product right is EVERYTHING. The frontend is not "UI" — it is the product's first impression, its personality, its proof of quality. Every pixel communicates craft.
+
+### Design DNA (from Linear + Dimension + Dala inspirations)
+
+- **Dark-mode-first**: Near-black canvas (#08090a to #0a0a0a), cool grays, one signature accent color
+- **Whisper-weight display type**: Large headlines at weight 200-400 with tight negative tracking (-0.03em+)
+- **Single accent color rationed**: One chromatic accent per screen (acid lime, indigo, or violet) — never decorative, always functional
+- **Glassmorphism over shadows**: Depth through backdrop-blur and translucency, not shadow stacks
+- **Pill-shaped interactions**: 9999px radius for buttons, badges, nav elements
+- **Instrument-panel density**: Compact, information-rich, every pixel earns its place
+- **1px hairline borders**: Surfaces defined by edges, not fills
+
+### Animation Requirements (MANDATORY on every interactive element)
+
+**Libraries**: Framer Motion (motion) + GSAP for complex sequences
+
+| Element | Animation | Duration | Easing |
+|---------|-----------|----------|--------|
+| Page transitions | Fade + subtle Y translate (8px) | 300ms | ease-out |
+| Cards appearing | Scale from 0.96 + opacity 0→1 | 250ms | spring(1, 80, 10) |
+| Button hover | Scale 1.02 + subtle glow | 150ms | ease-out |
+| Button press | Scale 0.97 | 100ms | ease-in |
+| Sidebar expand | Width animate + content fade | 200ms | ease-out |
+| Modal open | Backdrop fade + content scale from 0.95 | 250ms | spring |
+| Toast notification | Slide in from right + fade | 300ms | spring(1, 70, 12) |
+| Agent status pulse | Infinite scale pulse 1→1.15→1 | 2000ms | ease-in-out |
+| Loading skeleton | Shimmer gradient sweep left→right | 1500ms | linear, infinite |
+| Data streaming | Character-by-character reveal | 20ms per char | linear |
+| Progress indicators | Width animate with spring overshoot | 400ms | spring |
+| Tab switch | Active indicator slides with spring | 300ms | spring(1, 85, 12) |
+
+### Micro-Interactions (the details that make users say "this feels premium")
+
+- **Hover states on EVERYTHING interactive**: Subtle scale, opacity shift, or border color change
+- **Focus rings**: Animated focus ring that expands outward (not just a static border)
+- **Scroll-triggered reveals**: Elements fade/slide in as they enter viewport (IntersectionObserver + motion)
+- **Number counters**: Animate from 0 to value when entering viewport
+- **Cursor trails on dashboard**: Subtle cursor-follow glow on the agent visualization
+- **Message streaming**: Real-time character reveal (not pop-in) for agent messages
+- **Skeleton loading**: Every async operation shows a shimmer skeleton, never a blank space
+- **State transitions**: Never jump between states — always animate (empty → loading → content → error)
+- **Drag interactions**: Cards/items that can be reordered with spring physics
+- **Pull-to-refresh**: Rubber-band overscroll feedback
+
+### Sound Design (subtle, satisfying, optional — user can mute)
+
+| Action | Sound | Character |
+|--------|-------|-----------|
+| Task submitted | Soft "whoosh" (200ms) | Confidence — something launched |
+| Agent joined room | Subtle "ping" (150ms) | Presence — someone arrived |
+| Review passed | Satisfying "ding" (300ms) | Success — clean, bright |
+| Review failed | Low "thud" (200ms) | Attention needed — not alarming |
+| Task complete | Rising tone sequence (400ms) | Achievement — progression |
+| Approval needed | Gentle chime (250ms) | Decision point — soft urgency |
+
+**Implementation**: Web Audio API with pre-loaded buffers. Volume at 30% default. Mute toggle in settings. Never play sound without user having interacted first (browser autoplay policy).
+
+### Loading States (never show blank space)
+
+```
+1. Skeleton → shimmer gradient animation
+2. Pulse placeholder → subtle opacity breathing (0.4 → 0.7 → 0.4)
+3. Progress bar → spring-physics width with overshoot
+4. Spinner → custom SVG with stroke-dasharray animation
+5. Content streaming → character reveal with cursor blink
+```
+
+### Layout Principles
+
+- **Generous whitespace**: Let content breathe — 80-120px between major sections
+- **Information density**: Dense where data lives (tables, feeds), spacious where attention matters (hero, CTAs)
+- **Grid discipline**: 4px base unit, 8px column gaps, 1200px max content width
+- **Mobile-first responsive**: Stack gracefully, never break
+- **Sticky elements**: Navigation, agent status bar, approval queue — always accessible
+- **Z-index discipline**: Background(0) → Content(10) → Sticky(20) → Modal(30) → Toast(40) → Tooltip(50)
+
+### What "Selling the Product" Means in Practice
+
+The dashboard is not a data dump. It is a **narrative**:
+- The live agent feed should feel like watching a TEAM work (not reading logs)
+- Agent status cards should BREATHE — subtle animations showing life/activity
+- The task pipeline should have FLOW — visual indication of movement/progress
+- Memory accumulation should feel like GROWTH — numbers counting up, graphs filling
+- The approval queue should feel IMPORTANT — cards with weight, not flat lists
+
+### Anti-Patterns (absolutely forbidden)
+
+- Static pages with no animation → dead product
+- Jarring state changes without transitions → amateur
+- Loading spinners without context → anxiety-inducing
+- Flat unstyled tables → data dump, not product
+- Default browser focus rings → lazy
+- No hover states → feels broken
+- Instant content pop-in → cheapens the experience
+- Sound that plays without user consent → hostile

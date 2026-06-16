@@ -1,0 +1,1 @@
+"""Syndicate API route modules."""

@@ -1,0 +1,19 @@
+# Vibe-Syndicate
+
+## .gitignore
+*.env
+.env.*
+!.env.example
+agent_config.yaml
+docs/CREDENTIALS.md
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+.agents/
+dist/
+.next/
+*.egg-info/
+Reference_repos/
+Design_inspirations/
+Reference_repos/
