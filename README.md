@@ -62,6 +62,59 @@ flowchart TB
     Rooms --> QA_agent
 ```
 
+## Task Lifecycle
+
+```mermaid
+sequenceDiagram
+    participant U as User (Cursor/CLI)
+    participant N as Nexus
+    participant A as Architect
+    participant E as Engineer (Gemini)
+    participant R as Reviewer (GPT-4o)
+
+    U->>N: syn_task "add auth"
+    N->>A: @Architect — plan this task
+    A->>N: Plan ready (3 subtasks)
+    N->>E: @Engineer — implement st-1
+    E->>R: Code ready for review
+    R->>N: Review PASSED (risk: low)
+    N->>U: Task complete ✓
+```
+
+## Self-Improvement Loop
+
+```mermaid
+flowchart LR
+    Execute["Execute Task"] --> Review["Review Outcome"]
+    Review --> Extract["Extract Lessons"]
+    Extract --> Memory["Update Memory"]
+    Memory --> Evolve["Evolve Skills"]
+    Evolve --> Execute
+```
+
+## Memory Architecture
+
+```mermaid
+flowchart TB
+    subgraph layers [Three Memory Layers]
+        Protocol["Protocol State\n(per-task, ephemeral)"]
+        Project["Project Memory\n(conventions, permanent)"]
+        Agent["Agent Learning\n(cross-task, permanent)"]
+    end
+    
+    subgraph storage [Storage]
+        Supabase["Supabase (primary)"]
+        JSONL["Local JSONL (backup)"]
+    end
+
+    Protocol --> Supabase
+    Project --> Supabase
+    Agent --> Supabase
+    Protocol --> JSONL
+    Project --> JSONL
+    Agent --> JSONL
+```
+
 ## Why Syndicate?
 
 | Problem | Syndicate Solution |
@@ -131,6 +184,19 @@ Verifies: Band agents (6/6), Supabase tables (4), Gemini API, Azure OpenAI, proj
 | **MCP** | Python MCP server for Cursor/Claude integration |
 | **Deployment** | Vercel (frontend) + Railway (backend) + Supabase (DB) |
 
+## MCP Tools (Cursor Integration)
+
+Install: Add to `.cursor/mcp.json` and the tools appear in Cursor automatically.
+
+| Tool | What It Does |
+|------|-------------|
+| `syn_init` | Initialize Syndicate for a project |
+| `syn_task` | Send a development task to the swarm |
+| `syn_status` | Check agent status and active tasks |
+| `syn_review` | Request adversarial cross-model code review |
+| `syn_memory` | Query or store persistent project memory |
+| `syn_find_tool` | Search marketplaces for skills/MCPs |
+
 ## Project Structure
 
 ```
@@ -173,6 +239,16 @@ Vibe-Syndicate/
 - **Core requirement**: 3+ agents collaborating through Band (we have 6)
 - **Band usage**: CORE coordination layer — all agent-to-agent communication flows through Band rooms
 - **Differentiator**: Self-improving agents + cross-model adversarial review + persistent compound memory
+
+## Status
+
+| Phase | Status |
+|-------|--------|
+| P1: Foundation | ✓ Complete — 3-layer monorepo, Band agents, Supabase, Clerk |
+| P2: Orchestration | ✓ Complete — Nexus conductor, task lifecycle, SSE streaming |
+| P3: Intelligence | ✓ Complete — Memory engine, self-improvement, tool discovery |
+| P4: Interface | ✓ Complete — MCP server (6 tools), real-time dashboard (5 pages) |
+| P5: Polish | In Progress — deployment, video, submission |
 
 ## Author
 
