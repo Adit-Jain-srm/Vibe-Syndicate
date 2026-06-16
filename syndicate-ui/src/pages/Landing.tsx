@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import AgentOrb from '../components/3d/AgentOrb';
+import OrbConstellation from '../components/3d/OrbConstellation';
 import TextScramble from '../components/effects/TextScramble';
 import MagneticButton from '../components/effects/MagneticButton';
 import CountUp from '../components/effects/CountUp';
@@ -54,8 +55,8 @@ export default function Landing() {
     <div ref={containerRef} className="relative">
       {/* HERO */}
       <section className="relative h-screen flex flex-col items-center justify-center overflow-hidden gradient-wash">
-        <div className="absolute inset-0 opacity-50">
-          <AgentOrb color="#6b62f2" speed={0.3} distort={0.25} size={3} />
+        <div className="absolute inset-0">
+          <OrbConstellation />
         </div>
 
         <div className="relative z-10 text-center px-6 max-w-3xl">

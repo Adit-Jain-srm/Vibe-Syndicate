@@ -2,37 +2,37 @@ import { ShaderGradientCanvas, ShaderGradient } from '@shadergradient/react';
 
 export default function ShaderBackground() {
   return (
-    <div className="fixed inset-0 -z-10 opacity-70">
+    <div className="fixed inset-0 -z-10">
       <ShaderGradientCanvas
         style={{ width: '100%', height: '100%' }}
-        pixelDensity={1}
+        pixelDensity={1.5}
         fov={45}
       >
         <ShaderGradient
           type="waterPlane"
           animate="on"
-          uSpeed={0.1}
-          uStrength={1.5}
-          uDensity={1.2}
-          uFrequency={5.5}
-          uAmplitude={2}
+          uSpeed={0.2}
+          uStrength={2.5}
+          uDensity={1.8}
+          uFrequency={4}
+          uAmplitude={3}
           positionX={0}
-          positionY={0}
-          positionZ={0}
-          rotationX={0}
+          positionY={0.5}
+          positionZ={-1}
+          rotationX={-20}
           rotationY={0}
           rotationZ={0}
-          color1="#0a0a1a"
-          color2="#1a0a2e"
-          color3="#0a1a2e"
+          color1="#1a0533"
+          color2="#0d1b3e"
+          color3="#15062e"
           grain="on"
-          lightType="env"
+          lightType="3d"
           envPreset="dawn"
-          reflection={0.1}
-          brightness={0.8}
+          reflection={0.4}
+          brightness={1.2}
           cAzimuthAngle={180}
-          cPolarAngle={80}
-          cDistance={3.6}
+          cPolarAngle={90}
+          cDistance={2.8}
           cameraZoom={1}
         />
       </ShaderGradientCanvas>
