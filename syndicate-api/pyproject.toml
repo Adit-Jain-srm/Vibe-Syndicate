@@ -13,7 +13,6 @@ dependencies = [
     "pydantic-settings>=2.5",
     "python-dotenv>=1.0",
     "httpx>=0.28",
-    "syndicate-agent",
 ]
 
 [project.optional-dependencies]
@@ -22,9 +21,6 @@ dev = [
     "pytest-asyncio>=0.24",
     "ruff>=0.7",
 ]
-
-[tool.uv.sources]
-syndicate-agent = { path = "../syndicate-agent", editable = true }
 
 [build-system]
 requires = ["hatchling"]
