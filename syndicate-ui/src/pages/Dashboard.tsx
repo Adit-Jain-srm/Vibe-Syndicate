@@ -1,210 +1,194 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Send, Activity, Zap, CheckCircle, Brain, Bot } from 'lucide-react';
+import AgentOrb from '../components/3d/AgentOrb';
 import { api } from '../lib/api';
-import type { Agent, Task, Memory } from '../lib/api';
-import { playWhoosh } from '../lib/sounds';
-import PageTransition from '../components/ui/PageTransition';
-import AnimatedCard from '../components/ui/AnimatedCard';
-import AnimatedCounter from '../components/ui/AnimatedCounter';
-import StatusBadge from '../components/ui/StatusBadge';
-import SkeletonLoader from '../components/ui/SkeletonLoader';
-import GlassPanel from '../components/ui/GlassPanel';
+import type { Agent, Task } from '../lib/api';
+
+const AGENT_COLORS: Record<string, string> = {
+  nexus: '#6366f1',
+  architect: '#06b6d4',
+  engineer: '#34d399',
+  reviewer: '#fb7185',
+  researcher: '#fbbf24',
+  qa: '#8b5cf6',
+};
 
 export default function Dashboard() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [memories, setMemories] = useState<Memory[]>([]);
   const [taskInput, setTaskInput] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    Promise.all([
-      api.getAgents().catch(() => []),
-      api.getTasks().catch(() => []),
-      api.getMemories().catch(() => []),
-    ]).then(([a, t, m]) => {
-      setAgents(a);
-      setTasks(t);
-      setMemories(m);
-      setLoading(false);
-    });
+    api.getAgents().then(setAgents).catch(() => {});
+    api.getTasks().then(setTasks).catch(() => {});
   }, []);
 
-  const handleSubmitTask = async () => {
-    if (!taskInput.trim() || submitting) return;
-    setSubmitting(true);
-    playWhoosh();
-    try {
-      const newTask = await api.createTask(taskInput);
-      setTaskInput('');
-      // Navigate to Live Room to watch agents work
-      if (newTask?.id) {
-        window.location.href = `/live/${newTask.id}`;
-      } else {
-        const t = await api.getTasks().catch(() => []);
-        setTasks(t);
-      }
-    } finally {
-      setSubmitting(false);
-    }
+  const handleSubmit = async () => {
+    if (!taskInput.trim()) return;
+    await api.createTask(taskInput);
+    setTaskInput('');
+    api.getTasks().then(setTasks).catch(() => {});
   };
 
-  const activeAgents = agents.filter((a) => a.status === 'active').length;
-  const completeTasks = tasks.filter((t) => t.status === 'complete').length;
-
   return (
-    <PageTransition>
-      <div className="min-h-screen p-8 max-w-[1200px]">
-        {/* ── Header ─────────────────────────────── */}
-        <motion.div
-          initial={{ opacity: 0, y: -12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: 'easeOut' }}
-          className="mb-8"
-        >
-          <h1 className="text-3xl font-light tracking-tight text-snow">
-            Dashboard
-          </h1>
-          <p className="text-sm text-slate mt-1">
-            Multi-agent swarm overview
-          </p>
-        </motion.div>
-
-        {/* ── Stats Row ──────────────────────────── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {loading ? (
-            Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="rounded-xl border border-graphite bg-charcoal p-6">
-                <SkeletonLoader variant="stat" />
-              </div>
-            ))
-          ) : (
-            <>
-              <AnimatedCard glass delay={0} className="p-6">
-                <div className="flex items-center gap-2 mb-2">
-                  <Bot className="w-4 h-4 text-accent" />
-                  <p className="text-fog text-xs uppercase tracking-wide font-medium">
-                    Active Agents
-                  </p>
-                </div>
-                <p className="text-3xl font-light text-snow">
-                  <AnimatedCounter value={activeAgents} />
-                  <span className="text-lg text-slate">/{agents.length}</span>
-                </p>
-              </AnimatedCard>
-
-              <AnimatedCard glass delay={0.06} className="p-6">
-                <div className="flex items-center gap-2 mb-2">
-                  <Zap className="w-4 h-4 text-cyan" />
-                  <p className="text-fog text-xs uppercase tracking-wide font-medium">
-                    Tasks
-                  </p>
-                </div>
-                <p className="text-3xl font-light text-snow">
-                  <AnimatedCounter value={tasks.length} />
-                </p>
-              </AnimatedCard>
-
-              <AnimatedCard glass delay={0.12} className="p-6">
-                <div className="flex items-center gap-2 mb-2">
-                  <CheckCircle className="w-4 h-4 text-emerald" />
-                  <p className="text-fog text-xs uppercase tracking-wide font-medium">
-                    Complete
-                  </p>
-                </div>
-                <p className="text-3xl font-light text-snow">
-                  <AnimatedCounter value={completeTasks} />
-                </p>
-              </AnimatedCard>
-
-              <AnimatedCard glass delay={0.18} className="p-6">
-                <div className="flex items-center gap-2 mb-2">
-                  <Brain className="w-4 h-4 text-acid-lime" />
-                  <p className="text-fog text-xs uppercase tracking-wide font-medium">
-                    Memories
-                  </p>
-                </div>
-                <p className="text-3xl font-light text-snow">
-                  <AnimatedCounter value={memories.length} />
-                </p>
-              </AnimatedCard>
-            </>
-          )}
+    <div className="min-h-screen relative">
+      {/* Hero */}
+      <motion.section
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 1.2 }}
+        className="relative h-[60vh] flex items-center justify-center overflow-hidden"
+      >
+        {/* 3D Orb Background */}
+        <div className="absolute inset-0 opacity-60">
+          <AgentOrb color="#6366f1" speed={0.5} distort={0.3} size={2.5} />
         </div>
 
-        {/* ── Task Input ─────────────────────────── */}
+        {/* Hero Text */}
+        <div className="relative z-10 text-center px-8">
+          <motion.h1
+            initial={{ y: 30, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.3, duration: 0.8 }}
+            className="text-6xl md:text-8xl tracking-tight mb-4"
+            style={{ fontFamily: 'var(--font-display)' }}
+          >
+            Syndicate
+          </motion.h1>
+          <motion.p
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.6, duration: 0.8 }}
+            className="text-lg text-[var(--color-fog)] max-w-md mx-auto"
+          >
+            Compound intelligence that grows with you
+          </motion.p>
+        </div>
+      </motion.section>
+
+      {/* Stats Grid */}
+      <section className="px-8 -mt-20 relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
+          {[
+            { label: 'Agents', value: agents.length, color: '#6366f1' },
+            { label: 'Tasks', value: tasks.length, color: '#34d399' },
+            { label: 'Complete', value: tasks.filter(t => t.status === 'complete').length, color: '#fbbf24' },
+          ].map((stat, i) => (
+            <motion.div
+              key={stat.label}
+              initial={{ y: 40, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.8 + i * 0.15, duration: 0.6 }}
+              className="glass rounded-2xl p-6 glow-accent"
+            >
+              <p className="text-xs uppercase tracking-widest text-[var(--color-slate)] mb-2">{stat.label}</p>
+              <p className="text-4xl font-light" style={{ color: stat.color }}>{stat.value}</p>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* Task Input */}
+      <section className="px-8 mt-12 max-w-4xl mx-auto">
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.4 }}
+          initial={{ y: 30, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 1.2, duration: 0.6 }}
+          className="glass rounded-2xl p-8"
         >
-          <GlassPanel className="p-6 mb-8">
-            <h2 className="text-sm font-medium text-fog uppercase tracking-wide mb-4">
-              Send a Task to the Swarm
-            </h2>
-            <div className="flex gap-3">
-              <div className="flex-1 relative">
-                <input
-                  value={taskInput}
-                  onChange={(e) => setTaskInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSubmitTask()}
-                  placeholder="Describe what to build…"
-                  className="w-full bg-surface-input border border-graphite rounded-lg px-4 py-3 text-snow placeholder-slate focus:outline-none focus:border-accent/60 focus:shadow-[0_0_0_3px_rgba(94,106,210,0.12)] transition-all duration-200 text-sm"
+          <h2 className="text-xl mb-6" style={{ fontFamily: 'var(--font-display)' }}>
+            What shall we build?
+          </h2>
+          <div className="flex gap-4">
+            <input
+              value={taskInput}
+              onChange={e => setTaskInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+              placeholder="Describe your task..."
+              className="flex-1 bg-[var(--color-charcoal)] border border-[var(--color-iron)] rounded-xl px-5 py-4 text-[var(--color-snow)] placeholder-[var(--color-slate)] focus:outline-none focus:border-[var(--color-accent)] transition-all duration-300"
+            />
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleSubmit}
+              className="px-8 py-4 bg-[var(--color-accent)] text-white rounded-xl font-medium hover:bg-[var(--color-accent-glow)] transition-colors duration-200"
+            >
+              Send to Swarm
+            </motion.button>
+          </div>
+        </motion.div>
+      </section>
+
+      {/* Agent Orbs Grid */}
+      <section className="px-8 mt-16 max-w-6xl mx-auto">
+        <motion.h2
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.5 }}
+          className="text-2xl mb-8"
+          style={{ fontFamily: 'var(--font-display)' }}
+        >
+          The Swarm
+        </motion.h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          {(agents.length > 0 ? agents : [
+            { name: 'Nexus', role: 'nexus', status: 'idle', model: 'gemini' },
+            { name: 'Architect', role: 'architect', status: 'idle', model: 'gemini' },
+            { name: 'Engineer', role: 'engineer', status: 'idle', model: 'gemini' },
+            { name: 'Reviewer', role: 'reviewer', status: 'idle', model: 'gpt-4o' },
+            { name: 'Researcher', role: 'researcher', status: 'idle', model: 'gemini' },
+            { name: 'QA', role: 'qa', status: 'idle', model: 'gemini' },
+          ]).map((agent, i) => (
+            <motion.div
+              key={agent.name}
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 1.8 + i * 0.1, type: 'spring' }}
+              className="glass rounded-2xl p-4 aspect-square flex flex-col items-center justify-center group hover:glow-accent transition-all duration-500"
+            >
+              <div className="w-16 h-16 mb-3">
+                <AgentOrb
+                  color={AGENT_COLORS[agent.role] || '#6366f1'}
+                  speed={agent.status === 'active' ? 2 : 0.5}
+                  distort={agent.status === 'active' ? 0.5 : 0.2}
+                  size={0.8}
                 />
               </div>
-              <motion.button
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={handleSubmitTask}
-                disabled={submitting || !taskInput.trim()}
-                className="px-6 py-3 bg-accent text-white rounded-lg font-medium text-sm flex items-center gap-2 hover:bg-accent/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <Send size={14} />
-                {submitting ? 'Sending…' : 'Submit'}
-              </motion.button>
-            </div>
-          </GlassPanel>
-        </motion.div>
+              <p className="text-sm font-medium text-[var(--color-snow)]">{agent.name}</p>
+              <p className="text-[10px] text-[var(--color-slate)] mt-1 font-mono">{agent.role}</p>
+              <div className={`w-1.5 h-1.5 rounded-full mt-2 ${agent.status === 'active' ? 'bg-[var(--color-emerald)] animate-pulse' : 'bg-[var(--color-iron)]'}`} />
+            </motion.div>
+          ))}
+        </div>
+      </section>
 
-        {/* ── Recent Tasks ───────────────────────── */}
-        {tasks.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.4 }}
-          >
-            <GlassPanel className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-medium text-fog uppercase tracking-wide">
-                  Recent Tasks
-                </h2>
-                <Activity size={14} className="text-slate" />
-              </div>
-              <div className="space-y-2">
-                {tasks.slice(0, 6).map((task, i) => (
-                  <AnimatedCard
-                    key={task.id}
-                    delay={0.05 * i}
-                    className="p-4 flex items-center justify-between"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm text-snow truncate">
-                        {task.description}
-                      </p>
-                      <p className="text-[10px] text-slate font-mono mt-1">
-                        {task.id}
-                      </p>
-                    </div>
-                    <StatusBadge status={task.status} />
-                  </AnimatedCard>
-                ))}
-              </div>
-            </GlassPanel>
-          </motion.div>
-        )}
-      </div>
-    </PageTransition>
+      {/* Recent Tasks */}
+      {tasks.length > 0 && (
+        <section className="px-8 mt-16 max-w-4xl mx-auto pb-20">
+          <h2 className="text-xl mb-6" style={{ fontFamily: 'var(--font-display)' }}>Recent Work</h2>
+          <div className="space-y-3">
+            {tasks.slice(0, 5).map((task, i) => (
+              <motion.div
+                key={task.id}
+                initial={{ x: -20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: i * 0.1 }}
+                className="glass rounded-xl p-4 flex items-center justify-between group hover:border-[rgba(99,102,241,0.2)] transition-all"
+              >
+                <div>
+                  <p className="text-sm text-[var(--color-snow)]">{task.description}</p>
+                  <p className="text-[10px] text-[var(--color-slate)] font-mono mt-1">{task.id}</p>
+                </div>
+                <span className={`text-[10px] px-3 py-1 rounded-full font-mono ${
+                  task.status === 'complete' ? 'bg-[rgba(52,211,153,0.1)] text-[var(--color-emerald)]' :
+                  task.status === 'pending' ? 'bg-[rgba(99,102,241,0.1)] text-[var(--color-accent)]' :
+                  'bg-[rgba(98,102,109,0.1)] text-[var(--color-slate)]'
+                }`}>{task.status}</span>
+              </motion.div>
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
   );
 }
