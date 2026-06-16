@@ -30,18 +30,47 @@ export default function LiveRoom() {
       sourceRef.current.close();
     }
 
-    const source = new EventSource(`/api/events/${tid}/stream`);
+    const apiBase = import.meta.env.VITE_API_URL || '/api';
+    const source = new EventSource(`${apiBase}/events/${tid}/stream`);
     sourceRef.current = source;
 
-    source.onmessage = (e) => {
+    // Named event: connected
+    source.addEventListener('connected', () => {
+      setConnected(true);
+      setConnecting(false);
+    });
+
+    // Named event: task_event (real agent activity)
+    source.addEventListener('task_event', (e: MessageEvent) => {
       const data = JSON.parse(e.data);
-      if (data.type === 'connected') {
-        setConnected(true);
-        setConnecting(false);
-      } else {
-        setEvents((prev) => [...prev, data]);
-        playPing();
-      }
+      setEvents((prev) => [...prev, data]);
+      playPing();
+    });
+
+    // Named event: complete (task finished)
+    source.addEventListener('complete', () => {
+      setConnected(false);
+      source.close();
+    });
+
+    // Named event: timeout
+    source.addEventListener('timeout', () => {
+      setConnected(false);
+      source.close();
+    });
+
+    // Fallback for older format (data-only messages)
+    source.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.type === 'connected') {
+          setConnected(true);
+          setConnecting(false);
+        } else if (data.type) {
+          setEvents((prev) => [...prev, data]);
+          playPing();
+        }
+      } catch { /* ignore parse errors */ }
     };
 
     source.onerror = () => {
