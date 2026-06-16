@@ -3,7 +3,7 @@ import Dashboard from './pages/Dashboard';
 import LiveRoom from './pages/LiveRoom';
 import Agents from './pages/Agents';
 import Tasks from './pages/Tasks';
-import Memory from './pages/Memory';
+import MemoryPage from './pages/Memory';
 
 export default function AppRouter() {
   return (
@@ -13,7 +13,7 @@ export default function AppRouter() {
         <Route path="/live" element={<LiveRoom />} />
         <Route path="/agents" element={<Agents />} />
         <Route path="/tasks" element={<Tasks />} />
-        <Route path="/memory" element={<Memory />} />
+        <Route path="/memory" element={<MemoryPage />} />
       </Routes>
     </BrowserRouter>
   );
