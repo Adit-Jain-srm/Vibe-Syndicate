@@ -403,3 +403,5 @@ Key insight: **Tests are grouped by DOMAIN, not by type.** `test_agents.py` cove
 - 6 agents seeded in Supabase `agents` table: Nexus, Architect, Engineer, Reviewer, Researcher, QA
 - Frontend forked from Manthan → fully cleaned to Syndicate (no manthan references remain)
 - Windows PowerShell doesn't support `rm -rf` — use `Remove-Item -Recurse -Force` instead
+- `@clerk/react@6.10.0` removed `SignedIn`/`SignedOut` components — use `<Show when="signed-in|signed-out">` instead
+- PowerShell doesn't support bash heredoc (`<<'EOF'`) — use multiple `-m` flags for multi-line git commit messages

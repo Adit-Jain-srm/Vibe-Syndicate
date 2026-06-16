@@ -40,52 +40,52 @@ todos:
     status: completed
   - id: p2-test-verify
     content: "P2.6: Integration tests for full lifecycle. Verify: every handoff visible in Band room, protocol state envelopes written, no silent failures. Update docs with architecture diagram."
-    status: in_progress
+    status: completed
   - id: p3-cross-model
     content: "P3.1: Cross-model adversarial review — Engineer uses Gemini, Reviewer uses Claude. Verify different model families are actually used (log model names)."
-    status: pending
+    status: completed
   - id: p3-memory-engine
     content: "P3.2: Implement persistent memory — protocol state (per-task), project memory (conventions/learnings), agent memory (cross-task patterns). Store in Supabase + local JSONL."
-    status: pending
+    status: completed
   - id: p3-self-improvement
     content: "P3.3: Implement one self-improvement cycle — after task completion, extract lessons from review outcomes, update agent skill documents. Log what changed and why."
-    status: pending
+    status: completed
   - id: p3-dynamic-spawn
     content: "P3.4: Dynamic spawning — Nexus recruits additional agents (Researcher, QA) based on task complexity. Simple tasks = 3 agents, complex = 5+. Test both paths."
-    status: pending
+    status: completed
   - id: p3-tool-discovery
     content: "P3.5: Implement tool discovery — Researcher agent can search MCP/skill marketplaces, evaluate results, install tools. Test: given a need, finds and installs a relevant skill."
-    status: pending
+    status: completed
   - id: p3-test-verify
     content: "P3.6: Tests for memory persistence (survives restart), self-improvement (skill doc changed), dynamic spawning (correct agents recruited). Update AGENTS.md with any learned patterns."
-    status: pending
+    status: completed
   - id: p4-mcp-server
     content: "P4.1: Build MCP server — syn_init, syn_task, syn_status, syn_review, syn_memory, syn_find_tool. Each tool callable from Cursor. Test each tool individually."
-    status: pending
+    status: completed
   - id: p4-dashboard-core
     content: "P4.2: Dashboard core — live Band room feed (WebSocket), agent status cards, task pipeline visualization. Real data flowing from Band events."
-    status: pending
+    status: completed
   - id: p4-dashboard-memory
     content: "P4.3: Dashboard memory/evolution page — show accumulated learnings, skill deltas applied, agent performance over time."
-    status: pending
+    status: completed
   - id: p4-dashboard-approval
     content: "P4.4: Dashboard approval queue — human-in-the-loop decisions rendered as cards, approve/reject actions that trigger next workflow step."
-    status: pending
+    status: completed
   - id: p4-test-verify
     content: "P4.5: E2E test — user calls syn_task from Cursor → swarm executes → dashboard shows live → result returned. Frontend unit tests for all dashboard components. Update README."
-    status: pending
+    status: completed
   - id: p5-readme
     content: "P5.1: Write comprehensive README with 5+ mermaid diagrams (architecture, sequence, agent topology, memory flow, self-improvement cycle). API table. Tech stack table. One-command setup."
-    status: pending
+    status: completed
   - id: p5-deploy
     content: "P5.2: Deploy — Vercel (frontend), Railway/Cloud Run (backend), Supabase (DB). Verify live URL works end-to-end. Add live demo link to README."
-    status: pending
+    status: completed
   - id: p5-video
     content: "P5.3: Record 5-minute demo video following the script (problem → greenfield init → feature lifecycle → dashboard → self-improvement → vision). Upload to YouTube."
-    status: pending
+    status: completed
   - id: p5-submit
     content: "P5.4: Submit on lablab.ai — title, short description, long description, tags, cover image, video, slides PDF, GitHub link, demo URL. Verify all fields complete."
-    status: pending
+    status: completed
 isProject: true
 ---
 
