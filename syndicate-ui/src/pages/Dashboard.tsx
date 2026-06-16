@@ -37,10 +37,15 @@ export default function Dashboard() {
     setSubmitting(true);
     playWhoosh();
     try {
-      await api.createTask(taskInput);
+      const newTask = await api.createTask(taskInput);
       setTaskInput('');
-      const t = await api.getTasks().catch(() => []);
-      setTasks(t);
+      // Navigate to Live Room to watch agents work
+      if (newTask?.id) {
+        window.location.href = `/live/${newTask.id}`;
+      } else {
+        const t = await api.getTasks().catch(() => []);
+        setTasks(t);
+      }
     } finally {
       setSubmitting(false);
     }
