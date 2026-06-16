@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import AgentOrb from '../components/3d/AgentOrb';
+import { playSound } from '../lib/sounds';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -66,7 +67,7 @@ export default function Landing() {
             <motion.button
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
-              onClick={() => navigate('/app')}
+              onClick={() => { playSound('whoosh'); navigate('/app'); }}
               className="px-8 py-4 bg-[var(--color-indigo)] text-white rounded-full font-medium text-lg hover:shadow-[0_0_30px_rgba(107,98,242,0.3)] transition-shadow duration-300"
             >
               Enter the Swarm
@@ -142,7 +143,7 @@ export default function Landing() {
         <motion.button
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.97 }}
-          onClick={() => navigate('/app')}
+          onClick={() => { playSound('whoosh'); navigate('/app'); }}
           className="px-10 py-5 bg-[var(--color-indigo)] text-white rounded-full font-medium text-xl hover:shadow-[0_0_40px_rgba(107,98,242,0.35)] transition-shadow duration-300"
         >
           Enter Syndicate &rarr;

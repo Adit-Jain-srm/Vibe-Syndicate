@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Brain, Plus, Clock, Tag } from 'lucide-react';
 import { api } from '../lib/api';
 import type { Memory } from '../lib/api';
-import { playDing } from '../lib/sounds';
+import { playSound } from '../lib/sounds';
 import PageTransition from '../components/ui/PageTransition';
 import GlassPanel from '../components/ui/GlassPanel';
 import AnimatedCard from '../components/ui/AnimatedCard';
@@ -39,7 +39,7 @@ export default function MemoryPage() {
     setStoring(true);
     try {
       await api.storeMemory(newContent, selectedCategory);
-      playDing();
+      playSound('success');
       setNewContent('');
       const m = await api.getMemories().catch(() => []);
       setMemories(m);

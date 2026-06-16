@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Radio, Wifi, WifiOff } from 'lucide-react';
-import { playPing } from '../lib/sounds';
+import { playSound } from '../lib/sounds';
 import PageTransition from '../components/ui/PageTransition';
 import GlassPanel from '../components/ui/GlassPanel';
 import PulsingDot, { AGENT_COLORS_HEX } from '../components/ui/PulsingDot';
@@ -44,7 +44,7 @@ export default function LiveRoom() {
     source.addEventListener('task_event', (e: MessageEvent) => {
       const data = JSON.parse(e.data);
       setEvents((prev) => [...prev, data]);
-      playPing();
+      playSound('ping');
     });
 
     // Named event: complete (task finished)
@@ -68,7 +68,7 @@ export default function LiveRoom() {
           setConnecting(false);
         } else if (data.type) {
           setEvents((prev) => [...prev, data]);
-          playPing();
+          playSound('ping');
         }
       } catch { /* ignore parse errors */ }
     };

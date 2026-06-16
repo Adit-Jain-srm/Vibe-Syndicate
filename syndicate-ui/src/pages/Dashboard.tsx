@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import AgentOrb from '../components/3d/AgentOrb';
 import { api } from '../lib/api';
 import type { Agent, Task } from '../lib/api';
+import { playSound } from '../lib/sounds';
 
 const AGENT_COLORS: Record<string, string> = {
   nexus: '#6366f1',
@@ -26,6 +27,7 @@ export default function Dashboard() {
   const handleSubmit = async () => {
     if (!taskInput.trim()) return;
     await api.createTask(taskInput);
+    playSound('success');
     setTaskInput('');
     api.getTasks().then(setTasks).catch(() => {});
   };
