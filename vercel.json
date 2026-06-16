@@ -1,0 +1,7 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "cd syndicate-ui && npm install",
+  "buildCommand": "cd syndicate-ui && npm run build",
+  "outputDirectory": "syndicate-ui/dist",
+  "framework": "vite"
+}
