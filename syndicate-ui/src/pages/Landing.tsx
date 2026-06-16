@@ -55,7 +55,7 @@ export default function Landing() {
     <div ref={containerRef} className="relative">
       {/* HERO */}
       <section className="relative h-screen flex flex-col items-center justify-center overflow-hidden gradient-wash">
-        <div className="absolute inset-0">
+        <div className="absolute inset-0 pointer-events-none">
           <OrbConstellation />
         </div>
 
