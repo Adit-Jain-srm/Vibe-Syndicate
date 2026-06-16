@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ListTodo, ArrowRight } from 'lucide-react';
 import { api } from '../lib/api';
 import type { Task } from '../lib/api';
+import { DEMO_TASKS } from '../lib/demoData';
 import PageTransition from '../components/ui/PageTransition';
 import GlassPanel from '../components/ui/GlassPanel';
 import AnimatedCard from '../components/ui/AnimatedCard';
@@ -18,7 +19,7 @@ const STAGES = [
 ];
 
 export default function Tasks() {
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasks, setTasks] = useState<Task[]>(DEMO_TASKS);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

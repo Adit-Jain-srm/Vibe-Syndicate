@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Brain, Plus, Clock, Tag } from 'lucide-react';
 import { api } from '../lib/api';
 import type { Memory } from '../lib/api';
+import { DEMO_MEMORIES } from '../lib/demoData';
 import { playSound } from '../lib/sounds';
 import PageTransition from '../components/ui/PageTransition';
 import GlassPanel from '../components/ui/GlassPanel';
@@ -18,7 +19,7 @@ const CATEGORY_COLORS: Record<string, { bg: string; text: string; dot: string }>
 };
 
 export default function MemoryPage() {
-  const [memories, setMemories] = useState<Memory[]>([]);
+  const [memories, setMemories] = useState<Memory[]>(DEMO_MEMORIES);
   const [newContent, setNewContent] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('project');
   const [loading, setLoading] = useState(true);

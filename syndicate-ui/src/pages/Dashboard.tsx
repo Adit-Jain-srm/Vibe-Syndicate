@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import AgentOrb from '../components/3d/AgentOrb';
 import { api } from '../lib/api';
 import type { Agent, Task } from '../lib/api';
+import { DEMO_AGENTS, DEMO_TASKS } from '../lib/demoData';
 import { playSound } from '../lib/sounds';
 
 const AGENT_COLORS: Record<string, string> = {
@@ -15,8 +16,8 @@ const AGENT_COLORS: Record<string, string> = {
 };
 
 export default function Dashboard() {
-  const [agents, setAgents] = useState<Agent[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [agents, setAgents] = useState<Agent[]>(DEMO_AGENTS);
+  const [tasks, setTasks] = useState<Task[]>(DEMO_TASKS);
   const [taskInput, setTaskInput] = useState('');
 
   useEffect(() => {

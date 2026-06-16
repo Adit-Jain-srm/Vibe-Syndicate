@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { Bot, Cpu, Activity } from 'lucide-react';
 import { api } from '../lib/api';
 import type { Agent } from '../lib/api';
+import { DEMO_AGENTS } from '../lib/demoData';
 import PageTransition from '../components/ui/PageTransition';
 import AnimatedCard from '../components/ui/AnimatedCard';
 import GlassPanel from '../components/ui/GlassPanel';
@@ -20,7 +21,7 @@ const ROLE_DESCRIPTIONS: Record<string, string> = {
 };
 
 export default function Agents() {
-  const [agents, setAgents] = useState<Agent[]>([]);
+  const [agents, setAgents] = useState<Agent[]>(DEMO_AGENTS);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

@@ -4,6 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import AgentOrb from '../components/3d/AgentOrb';
+import TextScramble from '../components/effects/TextScramble';
+import MagneticButton from '../components/effects/MagneticButton';
+import CountUp from '../components/effects/CountUp';
 import { playSound } from '../lib/sounds';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -56,22 +59,24 @@ export default function Landing() {
         </div>
 
         <div className="relative z-10 text-center px-6 max-w-3xl">
-          <h1 className="hero-title text-[clamp(3rem,8vw,7rem)] leading-[0.9] tracking-tight text-white" style={{ fontFamily: 'var(--font-display)' }}>
-            Syndicate
-          </h1>
+          <div className="hero-title" style={{ fontFamily: 'var(--font-display)' }}>
+            <TextScramble text="Syndicate" className="text-[clamp(3rem,8vw,7rem)] leading-[0.9] tracking-tight text-white" as="h1" />
+          </div>
           <p className="hero-subtitle text-xl md:text-2xl text-[var(--color-dim)] mt-6 font-light leading-relaxed">
             Compound intelligence that grows with you.<br />
             <span className="text-[var(--color-subtle)]">Six AI agents. One swarm. Every task makes it smarter.</span>
           </p>
           <div className="hero-cta mt-10 flex gap-4 justify-center">
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => { playSound('whoosh'); navigate('/app'); }}
-              className="px-8 py-4 bg-[var(--color-indigo)] text-white rounded-full font-medium text-lg hover:shadow-[0_0_30px_rgba(107,98,242,0.3)] transition-shadow duration-300"
-            >
-              Enter the Swarm
-            </motion.button>
+            <MagneticButton>
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => { playSound('whoosh'); navigate('/app'); }}
+                className="px-8 py-4 bg-[var(--color-indigo)] text-white rounded-full font-medium text-lg hover:shadow-[0_0_30px_rgba(107,98,242,0.3)] transition-shadow duration-300"
+              >
+                Enter the Swarm
+              </motion.button>
+            </MagneticButton>
             <motion.a
               whileHover={{ scale: 1.03 }}
               href="https://github.com/Adit-Jain-srm/Vibe-Syndicate"
@@ -80,6 +85,20 @@ export default function Landing() {
             >
               View Source
             </motion.a>
+          </div>
+
+          {/* Stats */}
+          <div className="mt-14 flex justify-center gap-8 md:gap-12">
+            {[
+              { end: 6, label: 'Agents' },
+              { end: 3, label: 'Model Providers' },
+              { end: 5, label: 'Memory Layers' },
+            ].map((s) => (
+              <div key={s.label} className="text-center">
+                <CountUp end={s.end} className="text-3xl font-light text-[var(--color-indigo)]" />
+                <p className="text-[11px] text-[var(--color-muted)] mt-1 uppercase tracking-wider">{s.label}</p>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -140,14 +159,16 @@ export default function Landing() {
         <h2 className="text-4xl md:text-6xl tracking-tight mb-6" style={{ fontFamily: 'var(--font-display)' }}>
           Ready to build with<br />compound intelligence?
         </h2>
-        <motion.button
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.97 }}
-          onClick={() => { playSound('whoosh'); navigate('/app'); }}
-          className="px-10 py-5 bg-[var(--color-indigo)] text-white rounded-full font-medium text-xl hover:shadow-[0_0_40px_rgba(107,98,242,0.35)] transition-shadow duration-300"
-        >
-          Enter Syndicate &rarr;
-        </motion.button>
+        <MagneticButton className="inline-block">
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            onClick={() => { playSound('whoosh'); navigate('/app'); }}
+            className="px-10 py-5 bg-[var(--color-indigo)] text-white rounded-full font-medium text-xl hover:shadow-[0_0_40px_rgba(107,98,242,0.35)] transition-shadow duration-300"
+          >
+            Enter Syndicate &rarr;
+          </motion.button>
+        </MagneticButton>
         <p className="text-[var(--color-muted)] mt-6 text-sm">
           Built for the <a href="https://lablab.ai/ai-hackathons/band-of-agents-hackathon" className="text-[var(--color-indigo)] hover:underline">Band of Agents Hackathon</a> by Adit Jain
         </p>

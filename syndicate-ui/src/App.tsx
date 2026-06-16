@@ -4,6 +4,7 @@ import { useEffect, useCallback } from 'react';
 import AppRouter from './AppRouter';
 import Sidebar from './components/Sidebar';
 import ShaderBackground from './components/3d/ShaderBackground';
+import CursorGlow from './components/effects/CursorGlow';
 import { playSound } from './lib/sounds';
 
 function AppShell() {
@@ -23,6 +24,7 @@ function AppShell() {
   return (
     <div className="noise">
       <ShaderBackground />
+      <CursorGlow />
       {isDashboard && <Sidebar />}
       <main className={isDashboard ? 'ml-16' : ''}>
         <AnimatePresence mode="wait">
