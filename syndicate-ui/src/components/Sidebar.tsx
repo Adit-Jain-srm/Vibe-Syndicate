@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'motion/react';
 
 const NAV = [
-  { path: '/', label: 'Dashboard', icon: '◈' },
+  { path: '/app', label: 'Dashboard', icon: '◈' },
   { path: '/live', label: 'Live', icon: '◉' },
   { path: '/agents', label: 'Agents', icon: '⬡' },
   { path: '/tasks', label: 'Tasks', icon: '▣' },
