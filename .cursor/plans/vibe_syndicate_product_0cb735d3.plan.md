@@ -25,22 +25,22 @@ todos:
     status: completed
   - id: p2-nexus-conductor
     content: "P2.1: Implement Nexus conductor prompt + Band integration. Task routing, agent discovery, protocol state tracking. Test: send task → Nexus correctly identifies required agents."
-    status: pending
+    status: completed
   - id: p2-architect-agent
     content: "P2.2: Implement Architect agent — receives task from Nexus, decomposes into subtasks, returns structured plan. Test: plan quality (has subtasks, files, acceptance criteria)."
-    status: pending
+    status: completed
   - id: p2-engineer-agent
     content: "P2.3: Implement Engineer agent — receives subtask from Nexus, generates code in isolated workspace. Test: code is syntactically valid, addresses the subtask."
-    status: pending
+    status: completed
   - id: p2-reviewer-agent
     content: "P2.4: Implement Reviewer agent (DIFFERENT model family from Engineer). Receives PR/code, produces structured review. Test: review catches intentional bugs in test code."
-    status: pending
+    status: completed
   - id: p2-full-lifecycle
     content: "P2.5: Wire full lifecycle: task → Nexus → Architect → plan → Nexus → Engineer → code → Reviewer → verdict. ALL communication through Band rooms with visible @mentions."
-    status: pending
+    status: completed
   - id: p2-test-verify
     content: "P2.6: Integration tests for full lifecycle. Verify: every handoff visible in Band room, protocol state envelopes written, no silent failures. Update docs with architecture diagram."
-    status: pending
+    status: in_progress
   - id: p3-cross-model
     content: "P3.1: Cross-model adversarial review — Engineer uses Gemini, Reviewer uses Claude. Verify different model families are actually used (log model names)."
     status: pending

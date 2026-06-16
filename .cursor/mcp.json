@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "syndicate": {
+      "command": "python",
+      "args": ["syndicate-mcp/server.py"]
+    }
+  }
+}

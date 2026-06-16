@@ -151,6 +151,16 @@ async def run_swarm():
         logger.error("No agents configured. Fill agent_config.yaml first.")
         return
 
+    # Initialize orchestrator for task lifecycle management
+    from syndicate_agent.orchestrator import SyndicateOrchestrator
+    from syndicate_agent.config import Config
+
+    cfg = Config.load()
+    orchestrator = SyndicateOrchestrator(cfg)
+    import syndicate_agent
+    syndicate_agent._orchestrator = orchestrator
+    logger.info("Orchestrator initialized")
+
     logger.info("Starting Syndicate swarm with %d agents...", len(config))
 
     tasks = []
