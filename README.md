@@ -1,84 +1,183 @@
-# Syndicate
+<p align="center">
+  <h1 align="center">Syndicate</h1>
+  <p align="center"><strong>Compound intelligence for developers</strong> — a self-improving multi-agent swarm that grows with you.</p>
+</p>
 
-**Compound intelligence for developers** — a self-improving multi-agent swarm that grows with you.
+<p align="center">
+  <img src="https://img.shields.io/badge/Band.ai-Multi--Agent-5e6ad2?style=for-the-badge" alt="Band.ai">
+  <img src="https://img.shields.io/badge/Gemini-2.5_Flash-4285F4?style=for-the-badge&logo=google&logoColor=white" alt="Gemini">
+  <img src="https://img.shields.io/badge/Azure_OpenAI-GPT--4o-0078D4?style=for-the-badge&logo=microsoftazure&logoColor=white" alt="Azure OpenAI">
+  <img src="https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React 19">
+  <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License">
+</p>
 
-> Specialized AI agents collaborate through [Band](https://band.ai) rooms, accumulating intelligence across sessions so the 100th task is 10x better than the 1st.
+<p align="center">
+  <strong>Band of Agents Hackathon</strong> · June 12–19, 2026 · <a href="https://lablab.ai/ai-hackathons/band-of-agents-hackathon">lablab.ai</a>
+</p>
+
+---
+
+## What is Syndicate?
+
+Syndicate is a multi-agent developer orchestration platform where **6 specialized AI agents** collaborate through [Band](https://band.ai) rooms to deliver complete software workflows — from project initialization through deployment.
+
+Unlike existing AI tools that start fresh every session, Syndicate **accumulates intelligence**: every task makes it better at the next one.
+
+```mermaid
+flowchart TB
+    subgraph user [User Surfaces]
+        MCP["MCP Server (syn_*)"]
+        CLI["CLI"]
+        Dashboard["Web Dashboard"]
+    end
+
+    subgraph core [Core Engine]
+        Nexus["Nexus (Conductor)"]
+        Memory["Memory Engine"]
+        Skills["Skill Engine"]
+    end
+
+    subgraph band [Band.ai Coordination]
+        Rooms["Chat Rooms + @mention routing"]
+    end
+
+    subgraph swarm [Agent Swarm]
+        Arch["Architect (Gemini)"]
+        Eng["Engineer (Gemini)"]
+        Rev["Reviewer (Azure GPT-4o)"]
+        Res["Researcher (Gemini)"]
+        QA_agent["QA (Gemini)"]
+    end
+
+    MCP --> Nexus
+    CLI --> Nexus
+    Dashboard --> Nexus
+    Nexus --> Memory
+    Nexus --> Skills
+    Nexus --> Rooms
+    Rooms --> Arch
+    Rooms --> Eng
+    Rooms --> Rev
+    Rooms --> Res
+    Rooms --> QA_agent
+```
+
+## Why Syndicate?
+
+| Problem | Syndicate Solution |
+|---------|-------------------|
+| AI tools are stateless — context lost every session | Persistent memory compounds across tasks and sessions |
+| Single models have blind spots | Cross-model adversarial review (Gemini writes, GPT-4o reviews) |
+| Planning, coding, reviewing are fragmented | Unified multi-agent lifecycle with visible handoffs |
+| AI never learns your codebase | Project memory stores conventions, gotchas, architecture decisions |
+| No visibility into AI collaboration | Real-time dashboard shows agent-to-agent work live |
+
+## Agent Roster
+
+| Agent | Role | Model | What It Does |
+|-------|------|-------|-------------|
+| **Nexus** | Conductor | Gemini 2.5 Flash | Routes tasks, discovers peers, tracks protocol state |
+| **Architect** | Planner | Gemini 2.5 Flash | Decomposes tasks into structured subtasks |
+| **Engineer** | Coder | Gemini 2.5 Flash | Implements code in isolated workspaces |
+| **Reviewer** | Quality Gate | Azure OpenAI GPT-4o | Adversarial cross-model code review |
+| **Researcher** | Discovery | Gemini 2.5 Flash | Web research, tool discovery, prior art |
+| **QA** | Validator | Gemini 2.5 Flash | Testing and verification |
+
+All agents communicate through **Band rooms** with @mention routing. Cross-model review is mandatory — the reviewer always runs on a different model family than the engineer.
 
 ## Quick Start
 
 ```bash
 # Prerequisites: Python 3.12+, Node 20+, uv
-git clone https://github.com/YOUR_USERNAME/vibe-syndicate
-cd vibe-syndicate
+git clone https://github.com/Adit-Jain-srm/Vibe-Syndicate.git
+cd Vibe-Syndicate
 
 # Environment
 cp .env.example .env
-# Fill in: GOOGLE_API_KEY, ANTHROPIC_API_KEY, CLERK_*, SUPABASE_*
+# Fill in: GOOGLE_API_KEY, AZURE_OPENAI_API_KEY, CLERK keys, SUPABASE keys
 
-# 1. Register agents on Band (https://app.band.ai/agents → New Agent → External Agent)
-#    Create 6 agents: Nexus, Architect, Engineer, Reviewer, Researcher, QA
-#    Copy UUIDs + API keys into agent_config.yaml
-
-# 2. Set up Supabase
-#    Create project at supabase.com
-#    Run syndicate-api/migrations/001_initial_schema.sql in SQL Editor
-#    Copy connection string to DATABASE_URL in .env
-
-# 3. Backend
+# Backend
 cd syndicate-api && uv sync && uv run uvicorn syndicate_api.main:app --reload --port 8000
 
-# 4. Frontend (new terminal)
+# Frontend (new terminal)
 cd syndicate-ui && npm install && npm run dev
 
-# 5. Agent swarm (new terminal)
-cd syndicate-agent && uv sync && uv run python -m syndicate_agent.main
-
-# 6. Test Band connectivity
-cd syndicate-agent && uv run python -m syndicate_agent.test_band_connection
+# Agent swarm (new terminal)  
+cd syndicate-agent && uv sync && python -m syndicate_agent.main
 ```
 
 ## Testing
 
 ```bash
-# Install test deps
 pip install pytest pytest-asyncio httpx pyyaml
 
-# Run P1 verification tests
+# Full P1 verification (14 tests)
 python -m pytest tests/test_e2e_p1.py -v
-
-# Run Band connectivity test
-python test_connections.py
-
-# Run all service tests
-python test_services.py
 ```
 
-Tests verify: Band agents (6/6), Supabase tables, Gemini API, Azure OpenAI, project structure, no legacy references.
-
-## Architecture
-
-```
-syndicate/
-├── syndicate-agent/    # Agent brain — Band SDK + Gemini + Claude
-├── syndicate-api/      # Backend — FastAPI + Supabase + SSE
-├── syndicate-ui/       # Frontend — React 19 + Vite + Tailwind v4
-├── docs/               # Architecture docs, hackathon brief
-└── AGENTS.md           # Persistent preferences & learnings
-```
+Verifies: Band agents (6/6), Supabase tables (4), Gemini API, Azure OpenAI, project structure integrity.
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
-| Agent Coordination | Band.ai (rooms, @mention routing, WebSocket) |
-| Agent Brain | Google ADK patterns, Band SDK adapters |
-| LLM | Gemini 2.5 Flash (primary) + Claude Sonnet 4 (adversarial review) |
-| Frontend | React 19, Vite, TypeScript, Tailwind v4, Framer Motion, Zustand |
-| Auth | Clerk (GitHub + Google + Microsoft OAuth) |
-| Backend | FastAPI, asyncpg, Pydantic v2 |
-| Database | Supabase (PostgreSQL) |
-| Deployment | Vercel (frontend) + Railway (backend) + Supabase (DB) |
+| **Agent Coordination** | [Band.ai](https://band.ai) — rooms, @mention routing, WebSocket, peer discovery |
+| **LLM (Primary)** | Google Gemini 2.5 Flash — coordinator + specialists |
+| **LLM (Adversarial)** | Azure OpenAI GPT-4o — cross-model code review |
+| **Frontend** | React 19 + Vite 8 + TypeScript 6 + Tailwind v4 + Zustand |
+| **Auth** | [Clerk](https://clerk.com) — GitHub + Google + Microsoft OAuth |
+| **Backend** | FastAPI + asyncpg + Pydantic v2 |
+| **Database** | [Supabase](https://supabase.com) (PostgreSQL) |
+| **MCP** | Python MCP server for Cursor/Claude integration |
+| **Deployment** | Vercel (frontend) + Railway (backend) + Supabase (DB) |
 
-## Status
+## Project Structure
 
-Phase 1: Foundation — Complete ✓
+```
+Vibe-Syndicate/
+├── syndicate-agent/           # Agent brain
+│   ├── src/syndicate_agent/
+│   │   ├── main.py            # Swarm runner (all agents concurrently)
+│   │   ├── config.py          # Environment config
+│   │   ├── types.py           # Typed vocabulary (Task, Event, Subtask, etc.)
+│   │   └── prompts/           # Per-role prompt documents
+│   │       ├── nexus.md       # Conductor protocol
+│   │       ├── architect.md   # Planning rules
+│   │       ├── engineer.md    # Implementation rules
+│   │       └── reviewer.md    # Review protocol
+│   └── pyproject.toml
+├── syndicate-api/             # Backend API
+│   ├── src/syndicate_api/
+│   │   ├── main.py            # FastAPI app
+│   │   ├── api/               # Routes (health, tasks, agents, events, memory)
+│   │   └── middleware/        # Clerk JWT auth
+│   ├── migrations/            # Supabase SQL
+│   └── pyproject.toml
+├── syndicate-ui/              # Frontend dashboard
+│   ├── src/
+│   │   ├── pages/             # Dashboard, LiveRoom, Agents, Tasks, Memory
+│   │   ├── components/        # UI primitives + auth
+│   │   └── globals.css        # Design tokens (Linear-inspired dark mode)
+│   └── package.json
+├── tests/                     # E2E verification tests
+├── docs/                      # Architecture docs, hackathon resources
+├── AGENTS.md                  # Persistent project memory & decisions
+└── .env.example               # All environment variables documented
+```
+
+## Hackathon
+
+**Band of Agents Hackathon** — [lablab.ai](https://lablab.ai/ai-hackathons/band-of-agents-hackathon)
+
+- **Track**: Multi-Agent Software Development
+- **Core requirement**: 3+ agents collaborating through Band (we have 6)
+- **Band usage**: CORE coordination layer — all agent-to-agent communication flows through Band rooms
+- **Differentiator**: Self-improving agents + cross-model adversarial review + persistent compound memory
+
+## Author
+
+**Adit Jain** — [@aditjain2005](https://github.com/Adit-Jain-srm)
+
+## License
+
+MIT

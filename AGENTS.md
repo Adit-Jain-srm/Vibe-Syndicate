@@ -298,6 +298,18 @@ EVERY N TASKS (epoch):
 - Created comprehensive ideation plan
 - Extracted structural/tooling learnings from NEXUS CDM (effort allocation, testing strategy, frontend architecture)
 
+### Session 2 (June 16, 2026) — P1 Complete
+- All 6 Band agents registered and verified (Nexus, Architect, Engineer, Reviewer, Researcher, QA)
+- Supabase project created, schema deployed, 6 agents seeded
+- Clerk auth configured (GitHub + Google + Microsoft OAuth)
+- Gemini 2.5 Flash verified working (primary agents)
+- Azure OpenAI GPT-4o verified working (adversarial reviewer)
+- UI running with dark theme + Clerk sign-in button
+- 14/14 E2E tests passing
+- Git commit 609007b pushed to main, p2-orchestration branch created
+- Learned: Band uses x-api-key header, Gemini model is gemini-2.5-flash, Clerk CLI blocked by WDAC
+- Learned: TypeScript 6.0 removes ignoreDeprecations flag
+
 ---
 
 ## Effort Allocation Learnings (from Reference Projects)
