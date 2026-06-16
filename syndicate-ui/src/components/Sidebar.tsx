@@ -7,8 +7,6 @@ const NAV = [
   { path: '/agents', label: 'Agents', icon: '⬡' },
   { path: '/tasks', label: 'Tasks', icon: '▣' },
   { path: '/memory', label: 'Memory', icon: '◇' },
-  { path: '/traces', label: 'Traces', icon: '⊘' },
-  { path: '/settings', label: 'Settings', icon: '⚙' },
 ];
 
 export default function Sidebar() {

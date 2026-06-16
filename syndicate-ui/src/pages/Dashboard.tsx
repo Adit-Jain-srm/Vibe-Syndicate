@@ -146,14 +146,13 @@ export default function Dashboard() {
               transition={{ delay: 1.8 + i * 0.1, type: 'spring' }}
               className="glass rounded-2xl p-4 aspect-square flex flex-col items-center justify-center group hover:glow-accent transition-all duration-500"
             >
-              <div className="w-16 h-16 mb-3">
-                <AgentOrb
-                  color={AGENT_COLORS[agent.role] || '#6366f1'}
-                  speed={agent.status === 'active' ? 2 : 0.5}
-                  distort={agent.status === 'active' ? 0.5 : 0.2}
-                  size={0.8}
-                />
-              </div>
+              <div
+                className={`w-12 h-12 mb-3 rounded-full transition-all duration-1000 ${agent.status === 'active' ? 'animate-pulse scale-110' : ''}`}
+                style={{
+                  background: `radial-gradient(circle at 30% 30%, ${AGENT_COLORS[agent.role] || '#6366f1'}88, ${AGENT_COLORS[agent.role] || '#6366f1'}22)`,
+                  boxShadow: `0 0 20px ${AGENT_COLORS[agent.role] || '#6366f1'}33, inset 0 0 15px ${AGENT_COLORS[agent.role] || '#6366f1'}22`,
+                }}
+              />
               <p className="text-sm font-medium text-[var(--color-snow)]">{agent.name}</p>
               <p className="text-[10px] text-[var(--color-slate)] mt-1 font-mono">{agent.role}</p>
               <div className={`w-1.5 h-1.5 rounded-full mt-2 ${agent.status === 'active' ? 'bg-[var(--color-emerald)] animate-pulse' : 'bg-[var(--color-iron)]'}`} />
