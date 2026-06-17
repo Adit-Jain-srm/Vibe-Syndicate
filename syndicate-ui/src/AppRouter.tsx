@@ -7,6 +7,9 @@ const LiveRoom = lazy(() => import('./pages/LiveRoom'));
 const Agents = lazy(() => import('./pages/Agents'));
 const Tasks = lazy(() => import('./pages/Tasks'));
 const Memory = lazy(() => import('./pages/Memory'));
+const Pipeline = lazy(() => import('./pages/Pipeline'));
+const Metrics = lazy(() => import('./pages/Metrics'));
+const Approvals = lazy(() => import('./pages/Approvals'));
 
 function Loading() {
   return (
@@ -27,6 +30,9 @@ export default function AppRouter() {
         <Route path="/agents" element={<Agents />} />
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/memory" element={<Memory />} />
+        <Route path="/pipeline" element={<Pipeline />} />
+        <Route path="/metrics" element={<Metrics />} />
+        <Route path="/approvals" element={<Approvals />} />
       </Routes>
     </Suspense>
   );

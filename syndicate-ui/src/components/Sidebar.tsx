@@ -3,10 +3,13 @@ import { motion } from 'motion/react';
 
 const NAV = [
   { path: '/app', label: 'Dashboard', icon: '◈' },
+  { path: '/pipeline', label: 'Pipeline', icon: '▸' },
   { path: '/live', label: 'Live', icon: '◉' },
   { path: '/agents', label: 'Agents', icon: '⬡' },
   { path: '/tasks', label: 'Tasks', icon: '▣' },
+  { path: '/metrics', label: 'Metrics', icon: '◔' },
   { path: '/memory', label: 'Memory', icon: '◇' },
+  { path: '/approvals', label: 'Approvals', icon: '⊙' },
 ];
 
 export default function Sidebar() {
