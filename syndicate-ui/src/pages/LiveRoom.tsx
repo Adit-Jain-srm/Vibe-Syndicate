@@ -1,90 +1,54 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Radio, Wifi, WifiOff } from 'lucide-react';
+import { api } from '../lib/api';
+import { supabase } from '../lib/supabase';
+import type { TaskEvent } from '../lib/api';
 import { playSound } from '../lib/sounds';
 import PageTransition from '../components/ui/PageTransition';
 import GlassPanel from '../components/ui/GlassPanel';
 import PulsingDot, { AGENT_COLORS_HEX } from '../components/ui/PulsingDot';
 
-interface StreamEvent {
-  type: string;
-  agent: string;
-  content: string;
-  timestamp: string;
-}
-
 export default function LiveRoom() {
-  const [events, setEvents] = useState<StreamEvent[]>([]);
+  const [events, setEvents] = useState<TaskEvent[]>([]);
   const [taskId, setTaskId] = useState('');
   const [connected, setConnected] = useState(false);
-  const [connecting, setConnecting] = useState(false);
+  const [showAll, setShowAll] = useState(true);
   const feedRef = useRef<HTMLDivElement>(null);
-  const sourceRef = useRef<EventSource | null>(null);
 
-  const connect = useCallback((tid: string) => {
-    if (!tid.trim()) return;
-    setConnecting(true);
-
-    // Close existing connection
-    if (sourceRef.current) {
-      sourceRef.current.close();
-    }
-
-    const apiBase = import.meta.env.VITE_API_URL || '/api';
-    const source = new EventSource(`${apiBase}/events/${tid}/stream`);
-    sourceRef.current = source;
-
-    // Named event: connected
-    source.addEventListener('connected', () => {
-      setConnected(true);
-      setConnecting(false);
-    });
-
-    // Named event: task_event (real agent activity)
-    source.addEventListener('task_event', (e: MessageEvent) => {
-      const data = JSON.parse(e.data);
-      setEvents((prev) => [...prev, data]);
-      playSound('ping');
-    });
-
-    // Named event: complete (task finished)
-    source.addEventListener('complete', () => {
-      setConnected(false);
-      source.close();
-    });
-
-    // Named event: timeout
-    source.addEventListener('timeout', () => {
-      setConnected(false);
-      source.close();
-    });
-
-    // Fallback for older format (data-only messages)
-    source.onmessage = (e) => {
-      try {
-        const data = JSON.parse(e.data);
-        if (data.type === 'connected') {
-          setConnected(true);
-          setConnecting(false);
-        } else if (data.type) {
-          setEvents((prev) => [...prev, data]);
-          playSound('ping');
-        }
-      } catch { /* ignore parse errors */ }
-    };
-
-    source.onerror = () => {
-      setConnected(false);
-      setConnecting(false);
-    };
-  }, []);
-
-  // Cleanup on unmount
+  // Load recent events on mount (show all mode)
   useEffect(() => {
-    return () => {
-      sourceRef.current?.close();
-    };
-  }, []);
+    if (showAll) {
+      api.getRecentEvents().then((evts) => {
+        setEvents(evts.reverse());
+      }).catch(() => {});
+    }
+  }, [showAll]);
+
+  // Realtime subscription
+  useEffect(() => {
+    const filter = taskId.trim() && !showAll
+      ? { filter: `task_id=eq.${taskId.trim()}` }
+      : {};
+
+    const channel = supabase
+      .channel(`events-live-${taskId || 'all'}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'events',
+        ...filter,
+      }, (payload) => {
+        const newEvent = payload.new as TaskEvent;
+        setEvents(prev => [...prev, newEvent]);
+        playSound('ping');
+      })
+      .subscribe((status) => {
+        setConnected(status === 'SUBSCRIBED');
+      });
+
+    return () => { supabase.removeChannel(channel); };
+  }, [taskId, showAll]);
 
   // Auto-scroll
   useEffect(() => {
@@ -95,6 +59,19 @@ export default function LiveRoom() {
       });
     }
   }, [events]);
+
+  const handleConnect = () => {
+    if (taskId.trim()) {
+      setShowAll(false);
+      setEvents([]);
+      api.getEvents(taskId.trim()).then(setEvents).catch(() => {});
+    }
+  };
+
+  const handleShowAll = () => {
+    setShowAll(true);
+    setTaskId('');
+  };
 
   return (
     <PageTransition>
@@ -128,15 +105,14 @@ export default function LiveRoom() {
               <input
                 value={taskId}
                 onChange={(e) => setTaskId(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && connect(taskId)}
-                placeholder="Enter task ID to watch…"
+                onKeyDown={(e) => e.key === 'Enter' && handleConnect()}
+                placeholder="Enter task ID to filter… (leave empty for all)"
                 className="flex-1 bg-surface-input border border-graphite rounded-lg px-4 py-2.5 text-sm text-snow placeholder-slate focus:outline-none focus:border-accent/60 transition-all font-mono"
               />
               <motion.button
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
-                onClick={() => connect(taskId)}
-                disabled={connecting}
+                onClick={handleConnect}
                 className={`px-5 py-2.5 rounded-lg text-sm font-medium flex items-center gap-2 transition-all ${
                   connected
                     ? 'bg-emerald/15 text-emerald border border-emerald/30'
@@ -146,12 +122,7 @@ export default function LiveRoom() {
                 {connected ? (
                   <>
                     <Wifi size={14} />
-                    Connected
-                  </>
-                ) : connecting ? (
-                  <>
-                    <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Connecting…
+                    Live
                   </>
                 ) : (
                   <>
@@ -160,6 +131,16 @@ export default function LiveRoom() {
                   </>
                 )}
               </motion.button>
+              {!showAll && (
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={handleShowAll}
+                  className="px-4 py-2.5 rounded-lg text-sm font-medium text-slate border border-graphite hover:border-accent/40 transition-all"
+                >
+                  Show All
+                </motion.button>
+              )}
             </div>
           </GlassPanel>
         </motion.div>
@@ -206,7 +187,9 @@ export default function LiveRoom() {
                   <p className="text-slate text-sm text-center">
                     {connected
                       ? 'Waiting for agent activity…'
-                      : 'Enter a task ID and connect to watch agents collaborate.'}
+                      : showAll
+                        ? 'No events yet. Submit a task from the Dashboard.'
+                        : 'Enter a task ID and connect to watch agents collaborate.'}
                   </p>
                 </div>
               )}
@@ -260,7 +243,7 @@ export default function LiveRoom() {
               <div className="border-t border-graphite/50 pt-3 mt-2 flex items-center justify-between text-[11px] text-slate">
                 <span>{events.length} events</span>
                 <span className="font-mono">
-                  task: {taskId.slice(0, 8)}…
+                  {showAll ? 'all tasks' : `task: ${taskId.slice(0, 8)}…`}
                 </span>
               </div>
             )}

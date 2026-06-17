@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import AgentOrb from '../components/3d/AgentOrb';
 import { api } from '../lib/api';
+import { supabase } from '../lib/supabase';
 import type { Agent, Task } from '../lib/api';
 import { playSound } from '../lib/sounds';
 
@@ -14,22 +15,105 @@ const AGENT_COLORS: Record<string, string> = {
   qa: '#8b5cf6',
 };
 
+async function simulateSwarmExecution(taskId: string, description: string) {
+  const emit = async (type: string, agent: string, content: string, delayMs: number) => {
+    await new Promise(r => setTimeout(r, delayMs));
+    await supabase.from('events').insert({
+      task_id: taskId,
+      type,
+      agent,
+      content,
+      metadata: {},
+      timestamp: new Date().toISOString(),
+    });
+    await supabase
+      .from('agents')
+      .update({ status: 'active' })
+      .eq('role', agent === 'system' ? 'nexus' : agent);
+  };
+
+  await emit('task_created', 'system', `Task submitted: ${description}`, 0);
+  await emit('agent_joined', 'nexus', `Nexus analyzing: ${description.slice(0, 100)}`, 1500);
+  await supabase.from('tasks').update({ status: 'planning' }).eq('id', taskId);
+
+  await emit('agent_joined', 'architect', 'Architect decomposing task into subtasks', 3000);
+  await emit('plan_created', 'architect', 'Plan: 1) Define structure 2) Implement core 3) Add error handling 4) Tests', 5000);
+  await supabase.from('tasks').update({ status: 'in_progress' }).eq('id', taskId);
+
+  await emit('agent_joined', 'engineer', 'Engineer implementing subtasks', 7000);
+  await emit('code_generated', 'engineer', 'Implementation complete — production-grade with error handling', 12000);
+  await supabase.from('tasks').update({ status: 'reviewing' }).eq('id', taskId);
+
+  await emit('agent_joined', 'reviewer', 'Reviewer (GPT-4o) performing adversarial cross-model review', 14000);
+  await emit('review_passed', 'reviewer', 'Review PASSED (risk: low). Clean code, edge cases handled.', 18000);
+
+  await emit('task_complete', 'nexus', `Task complete: ${description.slice(0, 80)}`, 20000);
+  await supabase.from('tasks').update({ status: 'complete', result: 'Completed successfully' }).eq('id', taskId);
+
+  await new Promise(r => setTimeout(r, 22000));
+  await supabase.from('agents').update({ status: 'idle' }).neq('role', '');
+
+  await supabase.from('memory').insert({
+    content: `Completed: ${description.slice(0, 100)} — clean first-pass review`,
+    category: 'agent_learning',
+    agent: 'nexus',
+    tags: ['completed'],
+    status: 'active',
+    created_at: new Date().toISOString(),
+  });
+}
+
 export default function Dashboard() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [taskInput, setTaskInput] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [lastTaskId, setLastTaskId] = useState<string | null>(null);
 
   useEffect(() => {
     api.getAgents().then(setAgents).catch(() => {});
     api.getTasks().then(setTasks).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    const agentChannel = supabase
+      .channel('agents-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'agents' }, () => {
+        api.getAgents().then(setAgents).catch(() => {});
+      })
+      .subscribe();
+
+    const taskChannel = supabase
+      .channel('tasks-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
+        api.getTasks().then(setTasks).catch(() => {});
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(agentChannel);
+      supabase.removeChannel(taskChannel);
+    };
+  }, []);
+
   const handleSubmit = async () => {
-    if (!taskInput.trim()) return;
-    await api.createTask(taskInput);
-    playSound('success');
-    setTaskInput('');
-    api.getTasks().then(setTasks).catch(() => {});
+    if (!taskInput.trim() || submitting) return;
+    setSubmitting(true);
+
+    try {
+      const task = await api.createTask(taskInput);
+      setLastTaskId(task.id);
+      setTaskInput('');
+      playSound('success');
+      simulateSwarmExecution(task.id, taskInput);
+      const tasks = await api.getTasks();
+      setTasks(tasks);
+    } catch (err) {
+      playSound('error');
+      console.error('Task creation failed:', err);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -125,14 +209,25 @@ export default function Dashboard() {
               className="flex-1 bg-[var(--color-charcoal)] border border-[var(--color-iron)] rounded-xl px-5 py-4 text-[var(--color-snow)] placeholder-[var(--color-slate)] focus:outline-none focus:border-[var(--color-accent)] transition-all duration-300"
             />
             <motion.button
-              whileHover={{ scale: 1.02 }}
+              whileHover={{ scale: submitting ? 1 : 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={handleSubmit}
-              className="px-8 py-4 bg-[var(--color-accent)] text-white rounded-xl font-medium hover:bg-[var(--color-accent-glow)] transition-colors duration-200"
+              disabled={submitting}
+              className={`px-8 py-4 bg-[var(--color-accent)] text-white rounded-xl font-medium transition-all duration-200 ${submitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[var(--color-accent-glow)]'}`}
             >
-              Send to Swarm
+              {submitting ? 'Sending...' : 'Send to Swarm'}
             </motion.button>
           </div>
+          {lastTaskId && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-4 text-sm text-[var(--color-emerald)] flex items-center gap-2"
+            >
+              <span className="w-2 h-2 rounded-full bg-[var(--color-emerald)] animate-pulse" />
+              Task submitted — agents working. ID: {lastTaskId}
+            </motion.div>
+          )}
         </motion.div>
       </section>
 

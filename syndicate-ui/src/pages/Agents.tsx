@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Bot, Cpu, Activity } from 'lucide-react';
 import { api } from '../lib/api';
+import { supabase } from '../lib/supabase';
 import type { Agent } from '../lib/api';
 import PageTransition from '../components/ui/PageTransition';
 import AnimatedCard from '../components/ui/AnimatedCard';
@@ -32,11 +33,14 @@ export default function Agents() {
       })
       .catch(() => setLoading(false));
 
-    const interval = setInterval(
-      () => api.getAgents().then(setAgents).catch(() => {}),
-      5000,
-    );
-    return () => clearInterval(interval);
+    const channel = supabase
+      .channel('agents-roster')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'agents' }, () => {
+        api.getAgents().then(setAgents).catch(() => {});
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   return (
