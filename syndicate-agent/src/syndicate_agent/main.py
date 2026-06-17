@@ -49,8 +49,8 @@ async def run_nexus(config: dict[str, dict[str, str]]) -> None:
         return
 
     try:
-        from thenvoi import Agent
-        from thenvoi.adapters import LangGraphAdapter
+        from band import Agent
+        from band.adapters import LangGraphAdapter
         from langchain_openai import ChatOpenAI
         from langgraph.checkpoint.memory import InMemorySaver
 
@@ -94,8 +94,8 @@ async def run_specialist(role: str, config: dict[str, dict[str, str]]) -> None:
         return
 
     try:
-        from thenvoi import Agent
-        from thenvoi.adapters import LangGraphAdapter
+        from band import Agent
+        from band.adapters import LangGraphAdapter
         from langchain_openai import ChatOpenAI
         from langgraph.checkpoint.memory import InMemorySaver
 
@@ -167,10 +167,12 @@ async def run_swarm():
 
     if "nexus" in config:
         tasks.append(asyncio.create_task(run_nexus(config)))
+        await asyncio.sleep(1)
 
     for role in ["architect", "engineer", "reviewer", "researcher", "qa"]:
         if role in config:
             tasks.append(asyncio.create_task(run_specialist(role, config)))
+            await asyncio.sleep(0.5)
 
     if not tasks:
         logger.error("No agents to start")

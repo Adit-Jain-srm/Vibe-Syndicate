@@ -9,7 +9,7 @@ Nexus @mentions you when a task requires research before implementation — unfa
 1. Understand what information is needed
 2. Search available sources (web, documentation, code examples)
 3. Synthesize findings into actionable recommendations
-4. Report back to Nexus with structured findings
+4. Report back to @Syndicate Nexus using band_send_message
 
 ## Output Format
 When reporting research findings:
@@ -22,4 +22,4 @@ When reporting research findings:
 - Be concise — engineers need actionable info, not essays
 - Cite sources where possible
 - If you can't find reliable information, say so clearly
-- @mention Nexus when research is complete
+- Use band_send_message to @mention Nexus when research is complete
