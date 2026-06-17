@@ -21,8 +21,12 @@ export default function Dashboard() {
   const [taskInput, setTaskInput] = useState('');
 
   useEffect(() => {
-    api.getAgents().then(setAgents).catch(() => {});
-    api.getTasks().then(setTasks).catch(() => {});
+    api.getAgents()
+      .then(data => setAgents(data.length > 0 ? data : DEMO_AGENTS))
+      .catch(() => setAgents(DEMO_AGENTS));
+    api.getTasks()
+      .then(data => setTasks(data.length > 0 ? data : DEMO_TASKS))
+      .catch(() => setTasks(DEMO_TASKS));
   }, []);
 
   const handleSubmit = async () => {

@@ -28,13 +28,13 @@ export default function Agents() {
     api
       .getAgents()
       .then((a) => {
-        setAgents(a);
+        setAgents(a.length > 0 ? a : DEMO_AGENTS);
         setLoading(false);
       })
       .catch(() => setLoading(false));
 
     const interval = setInterval(
-      () => api.getAgents().then(setAgents).catch(() => {}),
+      () => api.getAgents().then(a => setAgents(a.length > 0 ? a : DEMO_AGENTS)).catch(() => {}),
       5000,
     );
     return () => clearInterval(interval);

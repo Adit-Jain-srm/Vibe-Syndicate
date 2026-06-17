@@ -26,13 +26,13 @@ export default function Tasks() {
     api
       .getTasks()
       .then((t) => {
-        setTasks(t);
+        setTasks(t.length > 0 ? t : DEMO_TASKS);
         setLoading(false);
       })
       .catch(() => setLoading(false));
 
     const interval = setInterval(
-      () => api.getTasks().then(setTasks).catch(() => {}),
+      () => api.getTasks().then(t => setTasks(t.length > 0 ? t : DEMO_TASKS)).catch(() => {}),
       5000,
     );
     return () => clearInterval(interval);

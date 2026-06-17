@@ -29,7 +29,7 @@ export default function MemoryPage() {
     api
       .getMemories()
       .then((m) => {
-        setMemories(m);
+        setMemories(m.length > 0 ? m : DEMO_MEMORIES);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -42,8 +42,8 @@ export default function MemoryPage() {
       await api.storeMemory(newContent, selectedCategory);
       playSound('success');
       setNewContent('');
-      const m = await api.getMemories().catch(() => []);
-      setMemories(m);
+      const m = await api.getMemories().catch(() => [] as Memory[]);
+      setMemories(m.length > 0 ? m : DEMO_MEMORIES);
     } finally {
       setStoring(false);
     }
