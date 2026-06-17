@@ -117,7 +117,7 @@ INSERT INTO agents (name, role, description, model) VALUES
     ('Nexus', 'nexus', 'Conductor — coordination hub, routes tasks, tracks progress', 'gemini-2.5-flash'),
     ('Architect', 'architect', 'Planner — decomposes tasks into structured subtasks', 'gemini-2.5-flash'),
     ('Engineer', 'engineer', 'Coder — implements code from subtask assignments', 'gemini-2.5-flash'),
-    ('Reviewer', 'reviewer', 'Quality gate — adversarial cross-model code review', 'claude-sonnet-4'),
+    ('Reviewer', 'reviewer', 'Quality gate — adversarial cross-model code review', 'gpt-4o (Azure)'),
     ('Researcher', 'researcher', 'Web research, prior art discovery, tool finding', 'gemini-2.5-flash'),
     ('QA', 'qa', 'Testing and validation agent', 'gemini-2.5-flash')
 ON CONFLICT (name) DO NOTHING;

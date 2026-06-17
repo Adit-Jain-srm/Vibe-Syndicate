@@ -390,18 +390,21 @@ Key insight: **Tests are grouped by DOMAIN, not by type.** `test_agents.py` cove
 - Prefers targeted fixes over broad rewrites when debugging connectivity
 - Wants full output reported for test/connectivity commands (not summarized)
 - Runs test scripts as temp files at project root, then deletes them after
+- Frontend design aesthetic: Dimension-inspired glassmorphism (floating surfaces, translucency, pre-dawn color washes)
+- Wants cinematic landing that morphs into dashboard — the landing IS the dashboard, separated by scroll
+- Maximum effort on every layer simultaneously (3D, sound, motion, data) — never "pick one"
 
 ## Learned Workspace Facts
 
 - Band.ai auth uses `x-api-key` header, NOT `Authorization: Bearer` (returns 401 "Invalid JWT token" with Bearer)
+- Band SDK v1.0 pip package is `band-sdk` but imports as `band` (not `thenvoi`) — `from band import Agent`
+- Band SDK tool names are `band_*` (not `thenvoi_*`) — prompts must use `band_send_message`, `band_create_room`, etc.
 - Gemini correct model name is `gemini-2.5-flash` (GA stable); `gemini-2.5-flash-preview-05-20` returns 404 (retired)
 - Gemini OpenAI-compatible base URL: `https://generativelanguage.googleapis.com/v1beta/openai/`
 - Supabase REST API requires `service_role` key for full access; anon/publishable key returns 401 on root listing
 - Supabase has `SUPABASE_KEY` (service_role) and `SUPABASE_ANON_KEY` (anon) as separate env vars
 - Clerk CLI (`clerk.exe`) is blocked by Windows WDAC/Application Control on this machine — use SDK directly instead
 - Reviewer agent uses Azure OpenAI (gpt-4o) via `langchain-openai` ChatOpenAI, not Anthropic (migrated June 16)
-- 6 agents seeded in Supabase `agents` table: Nexus, Architect, Engineer, Reviewer, Researcher, QA
-- Frontend forked from Manthan → fully cleaned to Syndicate (no manthan references remain)
-- Windows PowerShell doesn't support `rm -rf` — use `Remove-Item -Recurse -Force` instead
-- `@clerk/react@6.10.0` removed `SignedIn`/`SignedOut` components — use `<Show when="signed-in|signed-out">` instead
-- PowerShell doesn't support bash heredoc (`<<'EOF'`) — use multiple `-m` flags for multi-line git commit messages
+- Frontend uses Supabase JS client directly (@supabase/supabase-js) — no separate backend API needed for dashboard
+- Vercel deployment: team `aj5`, project `syndicate-ui` at `syndicate-ui-five.vercel.app`; root `vercel.json` needed because UI is in `syndicate-ui/` subdirectory
+- GitHub repo `Adit-Jain-srm/Vibe-Syndicate` connected to Vercel — auto-deploys on push to `main`
