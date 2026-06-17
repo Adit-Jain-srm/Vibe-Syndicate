@@ -631,3 +631,92 @@ flowchart LR
 | SSE streaming | SSE streaming (keep as-is) |
 | Traces page | Agent collaboration visualization page |
 | Controls page | Approval queue + agent management |
+
+---
+
+## Critical Context for Next Agent Session
+
+### Credentials & Config (DO NOT put secrets here — they're in .env)
+- Supabase: `wilwqoflckenzgnggbgb.supabase.co` (project ref: wilwqoflckenzgnggbgb)
+- Band account UUID: `328db018-1c47-4e22-a080-5a0db897ca72`
+- Band user handle: `@aditjain2005`
+- Vercel team: `aj5`, project: `syndicate-ui`, URL: https://syndicate-ui-five.vercel.app
+- GitHub: `Adit-Jain-srm/Vibe-Syndicate`, branch: `main`
+- Agent config: `agent_config.yaml` (6 agents with Band UUIDs + keys)
+- LLM: Gemini 2.5 Flash (primary) + Azure OpenAI GPT-4o (reviewer)
+
+### File Layout
+```
+syndicate-agent/src/syndicate_agent/   ← Agent brain (Band SDK + LLM)
+  main.py                              ← Swarm runner (all 6 agents concurrently)
+  config.py                            ← Env-based config
+  types.py                             ← Typed vocabulary
+  orchestrator.py                      ← Task lifecycle + Supabase persistence
+  memory.py                            ← 3-layer memory engine
+  self_improve.py                      ← SkillOpt loop
+  tool_discovery.py                    ← GitHub skill search
+  prompts/                             ← Per-agent prompt docs (nexus, architect, engineer, reviewer, researcher, qa)
+
+syndicate-api/src/syndicate_api/       ← FastAPI backend (not deployed — frontend calls Supabase directly)
+  main.py, config.py, models.py, db.py
+  api/ (health, tasks, agents, events, memory, rooms, metrics)
+  middleware/auth.py                   ← Clerk JWT
+
+syndicate-ui/src/                      ← React 19 + Vite 8 + Tailwind v4 + Three.js
+  pages/ (Landing, Dashboard, Pipeline, LiveRoom, Agents, Tasks, Metrics, Memory, Approvals)
+  components/3d/ (AgentOrb, OrbConstellation, ShaderBackground, ParticleField)
+  components/effects/ (TextScramble, MagneticButton, CountUp, CursorGlow)
+  components/ (Sidebar, AgentAvatar)
+  lib/ (api.ts, supabase.ts, sounds.ts, demoData.ts)
+
+syndicate-mcp/server.py                ← MCP server (6 tools: syn_init, syn_task, syn_status, syn_review, syn_memory, syn_find_tool)
+.cursor/mcp.json                       ← Cursor MCP auto-discovery config
+```
+
+### Key Technical Facts
+- Band SDK: `from band import Agent`, `from band.adapters import LangGraphAdapter`
+- Band tools: `band_send_message`, `band_lookup_peers`, `band_add_participant`
+- Band auth: `x-api-key` header (not Bearer)
+- Supabase anon key is public (safe in frontend). Service key in .env for backend only.
+- Supabase Realtime: enabled on agents, tasks, events, memory tables
+- Frontend has NO backend dependency — all reads/writes go directly to Supabase
+- Simulation fallback: `simulateSwarmExecution()` in Dashboard.tsx writes timed events if swarm isn't running
+- Vercel auto-deploys from every push to main
+- Python swarm: `python -m syndicate_agent.main` (must run from project root for .env + agent_config.yaml paths)
+
+### What Works Right Now
+- ✓ All 6 Band agents connect and respond (when swarm is running)
+- ✓ Nexus routes to Architect, Architect produces plans
+- ✓ Dashboard submits tasks → events appear in real-time
+- ✓ 3D landing page with orb constellation
+- ✓ 8-page dashboard with glassmorphic design
+- ✓ Sound effects on interactions
+- ✓ Supabase Realtime subscriptions on all pages
+- ✓ MCP server with 6 tools (untested end-to-end in Cursor)
+
+### What Needs Work (Phases A-I)
+- Phase A: The bridge between REAL Band messages and Supabase events (currently simulated)
+- Phase B: Metrics computation and storage
+- Phase C: pgvector for semantic memory retrieval
+- Phase D: Approval gates that actually pause the Band workflow
+- Phase E: Pipeline page showing REAL event data with expandable content
+- Phase F: Graphs showing improvement trends over multiple tasks
+- Phase G: Page transitions, skeleton loaders, responsive, theme toggle
+- Phase H: Code audit, docs sync, CHANGELOG
+- Phase I: Comprehensive test suite (Supabase, frontend, Band, MCP, E2E)
+
+### Design References
+- `Design_inspirations/linear.app/DESIGN.md` — color tokens, typography scale, component specs
+- `Design_inspirations/www.dimension.dev/DESIGN.md` — glassmorphic recipe, pill shapes
+- `Design_inspirations/dala.craftedbygc.com/DESIGN.md` — void + particle constellation
+- `docs/PANEL-INSIGHTS.md` — judge criteria and panel validation
+- `docs/NETWORK-INTEGRATION-INSIGHTS.md` — mentor expertise and integration patterns
+- `docs/REFERENCE-INSIGHTS.md` — patterns from Codeband, Manthan, Spawn, Skill-Forge
+
+### Hackathon Info
+- Band of Agents Hackathon: June 12-19, 2026 (lablab.ai)
+- Track 2: Multi-Agent Software Development
+- Requirement: 3+ agents collaborating through Band (we have 6)
+- Submission: lablab.ai (video, slides, GitHub, demo URL)
+- Demo script: `docs/DEMO_SCRIPT.md`
+- Submission text: `docs/SUBMISSION.md`

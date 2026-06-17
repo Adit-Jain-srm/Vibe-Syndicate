@@ -408,3 +408,65 @@ Key insight: **Tests are grouped by DOMAIN, not by type.** `test_agents.py` cove
 - Frontend uses Supabase JS client directly (@supabase/supabase-js) — no separate backend API needed for dashboard
 - Vercel deployment: team `aj5`, project `syndicate-ui` at `syndicate-ui-five.vercel.app`; root `vercel.json` needed because UI is in `syndicate-ui/` subdirectory
 - GitHub repo `Adit-Jain-srm/Vibe-Syndicate` connected to Vercel — auto-deploys on push to `main`
+- Band SDK imports: `from band import Agent` and `from band.adapters import LangGraphAdapter`
+- Band platform tools are `band_send_message`, `band_lookup_peers`, `band_add_participant` (not thenvoi_*)
+- Agents respond ONLY when `python -m syndicate_agent.main` is actively running
+- ShaderGradient colors must be brighter than void background to be visible (use #1a0533 not #0a0a1a)
+- 3D Canvas with absolute positioning needs `pointer-events-none` or it blocks clicks
+- Vercel SPA routing needs `rewrites: [{"source": "/(.*)", "destination": "/index.html"}]`
+- Vite 8 requires `import type` for interface-only imports (TypeScript strictness)
+- Supabase Realtime requires `ALTER publication supabase_realtime ADD TABLE <name>`
+- MagneticButton should NOT have onClick — children handle their own clicks
+- DNS on this Windows machine is slow (~13-17s per resolution) — stagger agent startups
+
+### Session 3 (June 17-18, 2026) — Product Upgrade + Frontend Rebuild
+
+**What was built:**
+- Immersive 3D frontend: Three.js OrbConstellation, ShaderGradient background, particle field
+- Sound design: Web Audio API synthesized sounds (click, whoosh, ping, success, error, ambient)
+- Micro-interactions: TextScramble, MagneticButton, CountUp, CursorGlow
+- Cinematic landing page with GSAP ScrollTrigger
+- 3 new dashboard pages: Pipeline (signal flow), Metrics (KPIs + charts), Approvals (HITL)
+- Supabase direct integration (no backend needed for frontend)
+- Real-time Supabase Realtime subscriptions on all tables
+- Task submission with simulated swarm execution (writes timed events to Supabase)
+- Agent swarm running live on Band (all 6 agents connected)
+- Fixed: band_* tool names (was thenvoi_*), anti-duplication prompts, pointer-events on 3D
+
+**Architecture decisions:**
+- Frontend calls Supabase directly via @supabase/supabase-js (anon key for reads, inserts)
+- No backend deployment needed for the demo — Vercel frontend + Supabase = complete stack
+- Band SDK imports as `band` not `thenvoi` (band-sdk package)
+- Simulation fallback: if swarm isn't running, dashboard still shows realistic agent workflow
+- RLS policies enable anon access to all tables (SELECT + INSERT on tasks/events/memory)
+- Supabase Realtime enabled on agents, tasks, events, memory tables
+
+**Learned workspace facts:**
+- Band SDK imports: `from band import Agent` and `from band.adapters import LangGraphAdapter`
+- Band platform tools are `band_send_message`, `band_lookup_peers`, `band_add_participant` (not thenvoi_*)
+- Agents respond ONLY when `python -m syndicate_agent.main` is actively running
+- ShaderGradient colors must be brighter than void background to be visible (use #1a0533 not #0a0a1a)
+- 3D Canvas with absolute positioning needs `pointer-events-none` or it blocks clicks
+- Vercel SPA routing needs `rewrites: [{"source": "/(.*)", "destination": "/index.html"}]`
+- Vite 8 requires `import type` for interface-only imports (TypeScript strictness)
+- Supabase Realtime requires `ALTER publication supabase_realtime ADD TABLE <name>`
+- MagneticButton should NOT have onClick — children handle their own clicks
+- DNS on this Windows machine is slow (~13-17s per resolution) — stagger agent startups
+
+**Current deployed state:**
+- Frontend: https://syndicate-ui-five.vercel.app (auto-deploys from main)
+- Database: Supabase wilwqoflckenzgnggbgb.supabase.co (6 agents seeded, RLS active)
+- Agent swarm: runs locally with `python -m syndicate_agent.main` (connects to Band)
+- Git: github.com/Adit-Jain-srm/Vibe-Syndicate, branch main
+- Latest commit: 3d1fd50
+
+**Open work (Phase A-I in upgrade plan):**
+- Phase A: Real Band ↔ Dashboard bridge (agents write events to Supabase)
+- Phase B: Task metrics schema + computation
+- Phase C: pgvector semantic memory
+- Phase D: Approval gates integrated with swarm workflow
+- Phase E: Pipeline page connected to real events (expandable stages)
+- Phase F: Quantified self-improvement with graphs
+- Phase G: Frontend polish (transitions, skeletons, responsive, empty states)
+- Phase H: Self-review + documentation sync
+- Phase I: E2E testing suite

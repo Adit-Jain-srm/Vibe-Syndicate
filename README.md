@@ -231,6 +231,20 @@ Vibe-Syndicate/
 └── .env.example               # All environment variables documented
 ```
 
+## Dashboard Pages
+
+| Route | Page | Description |
+|-------|------|-------------|
+| `/` | Landing | Cinematic 3D landing with OrbConstellation, GSAP scroll reveals, CTA |
+| `/app` | Dashboard | Task submission, agent stats, swarm status indicator |
+| `/pipeline` | Pipeline | Signal-flow visualization: Input → Plan → Code → Review → Output |
+| `/live` | Live Room | Real-time event stream (Supabase Realtime) |
+| `/agents` | Agents | Roster with status, models, roles, descriptions |
+| `/tasks` | Tasks | Kanban pipeline: pending → planning → in_progress → reviewing → complete |
+| `/metrics` | Metrics | KPIs, agent activity distribution, self-improvement indicator |
+| `/memory` | Memory | Store/query persistent learnings and conventions |
+| `/approvals` | Approvals | Human-in-the-loop decisions with approve/reject actions |
+
 ## Hackathon
 
 **Band of Agents Hackathon** — [lablab.ai](https://lablab.ai/ai-hackathons/band-of-agents-hackathon)
@@ -242,13 +256,10 @@ Vibe-Syndicate/
 
 ## Status
 
-| Phase | Status |
-|-------|--------|
-| P1: Foundation | ✓ Complete — 3-layer monorepo, Band agents, Supabase, Clerk |
-| P2: Orchestration | ✓ Complete — Nexus conductor, task lifecycle, SSE streaming |
-| P3: Intelligence | ✓ Complete — Memory engine, self-improvement, tool discovery |
-| P4: Interface | ✓ Complete — MCP server (6 tools), real-time dashboard (5 pages) |
-| P5: Polish | In Progress — deployment, video, submission |
+- Phase 1-4: Complete ✓ (foundation, orchestration, intelligence, interface)
+- Phase 5: Complete ✓ (deployment, video script, submission draft)
+- Frontend: Immersive 3D + glassmorphic + sound design
+- **Next: Product Upgrade Plan (Phases A-I)** — see `.cursor/plans/vibe_syndicate_product_0cb735d3.plan.md`
 
 ## Author
 
