@@ -3,7 +3,6 @@ import { motion } from 'motion/react';
 import AgentOrb from '../components/3d/AgentOrb';
 import { api } from '../lib/api';
 import type { Agent, Task } from '../lib/api';
-import { DEMO_AGENTS, DEMO_TASKS } from '../lib/demoData';
 import { playSound } from '../lib/sounds';
 
 const AGENT_COLORS: Record<string, string> = {
@@ -16,17 +15,13 @@ const AGENT_COLORS: Record<string, string> = {
 };
 
 export default function Dashboard() {
-  const [agents, setAgents] = useState<Agent[]>(DEMO_AGENTS);
-  const [tasks, setTasks] = useState<Task[]>(DEMO_TASKS);
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [taskInput, setTaskInput] = useState('');
 
   useEffect(() => {
-    api.getAgents()
-      .then(data => setAgents(data.length > 0 ? data : DEMO_AGENTS))
-      .catch(() => setAgents(DEMO_AGENTS));
-    api.getTasks()
-      .then(data => setTasks(data.length > 0 ? data : DEMO_TASKS))
-      .catch(() => setTasks(DEMO_TASKS));
+    api.getAgents().then(setAgents).catch(() => {});
+    api.getTasks().then(setTasks).catch(() => {});
   }, []);
 
   const handleSubmit = async () => {
@@ -73,8 +68,23 @@ export default function Dashboard() {
         </div>
       </motion.section>
 
+      {/* Swarm Status */}
+      <div className="px-8 -mt-16 relative z-10 max-w-4xl mx-auto mb-6">
+        <div className={`px-4 py-3 rounded-xl border ${agents.length > 0 ? 'border-[var(--color-emerald)]/30 bg-[var(--color-emerald)]/5' : 'border-[var(--color-rose)]/30 bg-[var(--color-rose)]/5'}`}>
+          <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${agents.length > 0 ? 'bg-[var(--color-emerald)] animate-pulse' : 'bg-[var(--color-rose)]'}`} />
+            <span className="text-sm">
+              {agents.length > 0
+                ? `Swarm online — ${agents.length} agents connected`
+                : 'Swarm offline — run: python -m syndicate_agent.main'
+              }
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Stats Grid */}
-      <section className="px-8 -mt-20 relative z-10">
+      <section className="px-8 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
           {[
             { label: 'Agents', value: agents.length, color: '#6366f1' },
@@ -138,14 +148,11 @@ export default function Dashboard() {
           The Swarm
         </motion.h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {(agents.length > 0 ? agents : [
-            { name: 'Nexus', role: 'nexus', status: 'idle', model: 'gemini' },
-            { name: 'Architect', role: 'architect', status: 'idle', model: 'gemini' },
-            { name: 'Engineer', role: 'engineer', status: 'idle', model: 'gemini' },
-            { name: 'Reviewer', role: 'reviewer', status: 'idle', model: 'gpt-4o' },
-            { name: 'Researcher', role: 'researcher', status: 'idle', model: 'gemini' },
-            { name: 'QA', role: 'qa', status: 'idle', model: 'gemini' },
-          ]).map((agent, i) => (
+          {agents.length === 0 ? (
+            <div className="col-span-full text-center py-12 text-[var(--color-slate)] text-sm">
+              Swarm offline — no agents connected
+            </div>
+          ) : agents.map((agent, i) => (
             <motion.div
               key={agent.name}
               initial={{ scale: 0.8, opacity: 0 }}

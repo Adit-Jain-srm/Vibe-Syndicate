@@ -3,7 +3,6 @@ import { motion } from 'motion/react';
 import { Bot, Cpu, Activity } from 'lucide-react';
 import { api } from '../lib/api';
 import type { Agent } from '../lib/api';
-import { DEMO_AGENTS } from '../lib/demoData';
 import PageTransition from '../components/ui/PageTransition';
 import AnimatedCard from '../components/ui/AnimatedCard';
 import GlassPanel from '../components/ui/GlassPanel';
@@ -21,20 +20,20 @@ const ROLE_DESCRIPTIONS: Record<string, string> = {
 };
 
 export default function Agents() {
-  const [agents, setAgents] = useState<Agent[]>(DEMO_AGENTS);
+  const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     api
       .getAgents()
       .then((a) => {
-        setAgents(a.length > 0 ? a : DEMO_AGENTS);
+        setAgents(a);
         setLoading(false);
       })
       .catch(() => setLoading(false));
 
     const interval = setInterval(
-      () => api.getAgents().then(a => setAgents(a.length > 0 ? a : DEMO_AGENTS)).catch(() => {}),
+      () => api.getAgents().then(setAgents).catch(() => {}),
       5000,
     );
     return () => clearInterval(interval);
@@ -69,6 +68,17 @@ export default function Agents() {
                   <SkeletonLoader variant="card" />
                 </div>
               ))
+            : agents.length === 0 ? (
+                <div className="col-span-full">
+                  <GlassPanel variant="subtle" className="p-8 text-center">
+                    <Bot size={28} className="text-slate mx-auto mb-3" />
+                    <p className="text-slate text-sm">
+                      No agents connected. Start the swarm:{' '}
+                      <code className="text-fog bg-charcoal px-2 py-0.5 rounded text-xs">python -m syndicate_agent.main</code>
+                    </p>
+                  </GlassPanel>
+                </div>
+              )
             : agents.map((agent, i) => {
                 const color = AGENT_COLORS_HEX[agent.role] || '#8a8f98';
                 const desc =

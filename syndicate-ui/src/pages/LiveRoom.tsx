@@ -2,7 +2,6 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Radio, Wifi, WifiOff } from 'lucide-react';
 import { playSound } from '../lib/sounds';
-import { DEMO_EVENTS } from '../lib/demoData';
 import PageTransition from '../components/ui/PageTransition';
 import GlassPanel from '../components/ui/GlassPanel';
 import PulsingDot, { AGENT_COLORS_HEX } from '../components/ui/PulsingDot';
@@ -15,9 +14,7 @@ interface StreamEvent {
 }
 
 export default function LiveRoom() {
-  const [events, setEvents] = useState<StreamEvent[]>(
-    DEMO_EVENTS.map((e) => ({ type: e.type, agent: e.agent, content: e.content, timestamp: e.timestamp })),
-  );
+  const [events, setEvents] = useState<StreamEvent[]>([]);
   const [taskId, setTaskId] = useState('');
   const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(false);

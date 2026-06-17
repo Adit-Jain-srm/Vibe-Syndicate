@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Brain, Plus, Clock, Tag } from 'lucide-react';
 import { api } from '../lib/api';
 import type { Memory } from '../lib/api';
-import { DEMO_MEMORIES } from '../lib/demoData';
 import { playSound } from '../lib/sounds';
 import PageTransition from '../components/ui/PageTransition';
 import GlassPanel from '../components/ui/GlassPanel';
@@ -19,7 +18,7 @@ const CATEGORY_COLORS: Record<string, { bg: string; text: string; dot: string }>
 };
 
 export default function MemoryPage() {
-  const [memories, setMemories] = useState<Memory[]>(DEMO_MEMORIES);
+  const [memories, setMemories] = useState<Memory[]>([]);
   const [newContent, setNewContent] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('project');
   const [loading, setLoading] = useState(true);
@@ -29,7 +28,7 @@ export default function MemoryPage() {
     api
       .getMemories()
       .then((m) => {
-        setMemories(m.length > 0 ? m : DEMO_MEMORIES);
+        setMemories(m);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -43,7 +42,7 @@ export default function MemoryPage() {
       playSound('success');
       setNewContent('');
       const m = await api.getMemories().catch(() => [] as Memory[]);
-      setMemories(m.length > 0 ? m : DEMO_MEMORIES);
+      setMemories(m);
     } finally {
       setStoring(false);
     }
@@ -183,7 +182,7 @@ export default function MemoryPage() {
           ) : memories.length === 0 ? (
             <GlassPanel variant="subtle" className="p-8 text-center">
               <Brain size={28} className="text-slate mx-auto mb-3" />
-              <p className="text-slate text-sm">
+              <p className="text-sm text-slate mt-1">
                 No memories stored yet. Complete tasks or store learnings above.
               </p>
             </GlassPanel>

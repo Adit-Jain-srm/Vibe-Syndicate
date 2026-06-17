@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ListTodo, ArrowRight } from 'lucide-react';
 import { api } from '../lib/api';
 import type { Task } from '../lib/api';
-import { DEMO_TASKS } from '../lib/demoData';
 import PageTransition from '../components/ui/PageTransition';
 import GlassPanel from '../components/ui/GlassPanel';
 import AnimatedCard from '../components/ui/AnimatedCard';
@@ -19,20 +18,20 @@ const STAGES = [
 ];
 
 export default function Tasks() {
-  const [tasks, setTasks] = useState<Task[]>(DEMO_TASKS);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     api
       .getTasks()
       .then((t) => {
-        setTasks(t.length > 0 ? t : DEMO_TASKS);
+        setTasks(t);
         setLoading(false);
       })
       .catch(() => setLoading(false));
 
     const interval = setInterval(
-      () => api.getTasks().then(t => setTasks(t.length > 0 ? t : DEMO_TASKS)).catch(() => {}),
+      () => api.getTasks().then(setTasks).catch(() => {}),
       5000,
     );
     return () => clearInterval(interval);
@@ -84,6 +83,14 @@ export default function Tasks() {
         </motion.div>
 
         {/* ── Kanban Columns ──────────────────────── */}
+        {!loading && tasks.length === 0 ? (
+          <GlassPanel variant="subtle" className="p-8 text-center">
+            <ListTodo size={28} className="text-slate mx-auto mb-3" />
+            <p className="text-slate text-sm">
+              No tasks yet. Send a task to <span className="text-fog">@Syndicate Nexus</span> in Band.
+            </p>
+          </GlassPanel>
+        ) : (
         <div className="flex gap-4 overflow-x-auto pb-4">
           {STAGES.map((stage, colIndex) => {
             const stageTasks = tasks.filter((t) => t.status === stage.key);
@@ -157,6 +164,7 @@ export default function Tasks() {
             );
           })}
         </div>
+        )}
       </div>
     </PageTransition>
   );
