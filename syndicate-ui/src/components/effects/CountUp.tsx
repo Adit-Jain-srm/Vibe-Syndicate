@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 
 interface CountUpProps {
   end: number;
@@ -6,9 +7,10 @@ interface CountUpProps {
   className?: string;
   prefix?: string;
   suffix?: string;
+  style?: CSSProperties;
 }
 
-export default function CountUp({ end, duration = 2000, className = '', prefix = '', suffix = '' }: CountUpProps) {
+export default function CountUp({ end, duration = 2000, className = '', prefix = '', suffix = '', style }: CountUpProps) {
   const [count, setCount] = useState(0);
   const ref = useRef<HTMLSpanElement>(null);
   const started = useRef(false);
@@ -35,7 +37,7 @@ export default function CountUp({ end, duration = 2000, className = '', prefix =
   }, [end, duration]);
 
   return (
-    <span ref={ref} className={className}>
+    <span ref={ref} className={className} style={style}>
       {prefix}{count}{suffix}
     </span>
   );

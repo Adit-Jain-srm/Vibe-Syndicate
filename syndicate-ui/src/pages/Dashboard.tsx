@@ -5,6 +5,7 @@ import { api } from '../lib/api';
 import { supabase } from '../lib/supabase';
 import type { Agent, Task } from '../lib/api';
 import { playSound } from '../lib/sounds';
+import PageTransition from '../components/ui/PageTransition';
 
 const AGENT_COLORS: Record<string, string> = {
   nexus: '#6366f1',
@@ -24,7 +25,6 @@ async function simulateSwarmExecution(taskId: string, description: string) {
       agent,
       content,
       metadata: {},
-      timestamp: new Date().toISOString(),
     });
     await supabase
       .from('agents')
@@ -69,10 +69,13 @@ export default function Dashboard() {
   const [taskInput, setTaskInput] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [lastTaskId, setLastTaskId] = useState<string | null>(null);
+  const [isSimulated, setIsSimulated] = useState(false);
+  const [swarmLive, setSwarmLive] = useState(false);
 
   useEffect(() => {
     api.getAgents().then(setAgents).catch(() => {});
     api.getTasks().then(setTasks).catch(() => {});
+    api.isSwarmOnline().then(setSwarmLive).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -105,9 +108,16 @@ export default function Dashboard() {
       setLastTaskId(task.id);
       setTaskInput('');
       playSound('success');
-      simulateSwarmExecution(task.id, taskInput);
-      const tasks = await api.getTasks();
-      setTasks(tasks);
+
+      if (!swarmLive) {
+        setIsSimulated(true);
+        simulateSwarmExecution(task.id, taskInput);
+      } else {
+        setIsSimulated(false);
+      }
+
+      const updated = await api.getTasks();
+      setTasks(updated);
     } catch (err) {
       playSound('error');
       console.error('Task creation failed:', err);
@@ -117,6 +127,7 @@ export default function Dashboard() {
   };
 
   return (
+    <PageTransition>
     <div className="min-h-screen relative">
       {/* Hero */}
       <motion.section
@@ -222,10 +233,15 @@ export default function Dashboard() {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-4 text-sm text-[var(--color-emerald)] flex items-center gap-2"
+              className="mt-4 text-sm flex items-center gap-2"
             >
               <span className="w-2 h-2 rounded-full bg-[var(--color-emerald)] animate-pulse" />
-              Task submitted — agents working. ID: {lastTaskId}
+              <span className="text-[var(--color-emerald)]">
+                Task submitted — {isSimulated ? 'simulating agent workflow' : 'swarm processing live'}. ID: {lastTaskId}
+              </span>
+              {isSimulated && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--color-accent)]/10 text-[var(--color-accent)]">simulated</span>
+              )}
             </motion.div>
           )}
         </motion.div>
@@ -298,5 +314,6 @@ export default function Dashboard() {
         </section>
       )}
     </div>
+    </PageTransition>
   );
 }

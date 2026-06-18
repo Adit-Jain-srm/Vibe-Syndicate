@@ -11,6 +11,7 @@ class TaskStatus(str, Enum):
     PLANNING = "planning"
     IN_PROGRESS = "in_progress"
     REVIEWING = "reviewing"
+    AWAITING_APPROVAL = "awaiting_approval"
     COMPLETE = "complete"
     FAILED = "failed"
 
@@ -37,6 +38,9 @@ class EventType(str, Enum):
     MEMORY_STORED = "memory_stored"
     SKILL_EVOLVED = "skill_evolved"
     AGENT_THOUGHT = "agent_thought"
+    APPROVAL_NEEDED = "approval_needed"
+    APPROVAL_GRANTED = "approval_granted"
+    APPROVAL_REJECTED = "approval_rejected"
     ERROR = "error"
 
 

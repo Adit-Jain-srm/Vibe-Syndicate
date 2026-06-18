@@ -1,7 +1,7 @@
 import { cn } from '../../lib/cn';
 
 interface SkeletonProps {
-  variant?: 'line' | 'card' | 'avatar' | 'stat';
+  variant?: 'line' | 'card' | 'avatar' | 'stat' | 'text';
   className?: string;
   lines?: number;
 }
@@ -18,6 +18,16 @@ export default function SkeletonLoader({
   if (variant === 'avatar') {
     return (
       <div className={cn('w-10 h-10 rounded-full skeleton', className)} />
+    );
+  }
+
+  if (variant === 'text') {
+    return (
+      <div className={cn('flex gap-2', className)}>
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="skeleton h-8 rounded-full" style={{ width: `${60 + Math.random() * 40}px` }} />
+        ))}
+      </div>
     );
   }
 

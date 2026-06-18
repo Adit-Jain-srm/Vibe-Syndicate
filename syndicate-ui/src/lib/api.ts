@@ -1,8 +1,5 @@
 /**
  * Syndicate API client — Supabase direct + Realtime.
- *
- * Reads/writes directly to Supabase Postgres via the client SDK.
- * Real-time subscriptions via Supabase Realtime (Postgres Changes).
  */
 
 import { supabase } from './supabase';
@@ -68,7 +65,34 @@ export interface Metrics {
   memory_entries: number;
 }
 
-// ── SSE streaming (legacy interface — kept for type compat) ─────
+export interface TaskMetric {
+  id: string;
+  task_id: string;
+  first_pass_rate: boolean;
+  iteration_count: number;
+  time_to_complete_seconds: number;
+  tokens_used: number;
+  agents_involved: string[];
+  review_score: number;
+  created_at: string;
+}
+
+export interface Approval {
+  id: string;
+  task_id: string;
+  type: string;
+  status: string;
+  title: string;
+  description: string;
+  context: Record<string, unknown>;
+  agent: string;
+  risk_level: string;
+  decided_by?: string;
+  decided_at?: string;
+  created_at: string;
+}
+
+// ── SSE streaming (legacy interface) ────────────────────────────
 
 export type SSECallback = (event: {
   type: string;
@@ -84,12 +108,7 @@ export function subscribeToTaskEvents(
     .channel(`task-events-${taskId}`)
     .on(
       'postgres_changes',
-      {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'events',
-        filter: `task_id=eq.${taskId}`,
-      },
+      { event: 'INSERT', schema: 'public', table: 'events', filter: `task_id=eq.${taskId}` },
       (payload) => {
         const row = payload.new as TaskEvent;
         onEvent({ type: row.type || 'task_event', data: row as unknown as Record<string, unknown> });
@@ -97,91 +116,62 @@ export function subscribeToTaskEvents(
     )
     .subscribe();
 
-  return () => {
-    supabase.removeChannel(channel);
-  };
+  return () => { supabase.removeChannel(channel); };
 }
 
 // ── API methods ─────────────────────────────────────────────────
 
 export const api = {
-  // Agents — read from Supabase agents table
+  // Agents
   getAgents: async (): Promise<Agent[]> => {
-    const { data, error } = await supabase
-      .from('agents')
-      .select('*');
+    const { data, error } = await supabase.from('agents').select('*');
     if (error) throw error;
     return data || [];
+  },
+
+  isSwarmOnline: async (): Promise<boolean> => {
+    const { data } = await supabase.from('agents').select('status');
+    if (!data || data.length === 0) return false;
+    return data.some((a: { status: string }) => a.status === 'active');
   },
 
   // Tasks
   getTasks: async (): Promise<Task[]> => {
     const { data, error } = await supabase
-      .from('tasks')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(50);
+      .from('tasks').select('*').order('created_at', { ascending: false }).limit(50);
     if (error) throw error;
     return data || [];
   },
 
   getTask: async (id: string): Promise<Task> => {
-    const { data, error } = await supabase
-      .from('tasks')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const { data, error } = await supabase.from('tasks').select('*').eq('id', id).single();
     if (error) throw error;
     return data;
   },
 
   createTask: async (description: string, complexity = 'medium'): Promise<Task> => {
-    const id = `task_${crypto.randomUUID().slice(0, 12)}`;
-    const task = {
-      id,
-      description,
-      status: 'pending',
-      complexity,
-      created_at: new Date().toISOString(),
-    };
-
-    const { data, error } = await supabase
-      .from('tasks')
-      .insert(task)
-      .select()
-      .single();
-
+    const id = crypto.randomUUID();
+    const task = { id, description, status: 'pending', complexity, created_at: new Date().toISOString() };
+    const { data, error } = await supabase.from('tasks').insert(task).select().single();
     if (error) throw error;
-
     await supabase.from('events').insert({
-      task_id: id,
-      type: 'task_created',
-      agent: 'system',
-      content: `Task submitted: ${description}`,
-      metadata: { complexity },
-      timestamp: new Date().toISOString(),
+      task_id: id, type: 'task_created', agent: 'system',
+      content: `Task submitted: ${description}`, metadata: { complexity },
     });
-
     return data;
   },
 
   // Events
   getEvents: async (taskId: string): Promise<TaskEvent[]> => {
     const { data, error } = await supabase
-      .from('events')
-      .select('*')
-      .eq('task_id', taskId)
-      .order('created_at', { ascending: true });
+      .from('events').select('*').eq('task_id', taskId).order('created_at', { ascending: true });
     if (error) throw error;
     return data || [];
   },
 
   getRecentEvents: async (): Promise<TaskEvent[]> => {
     const { data, error } = await supabase
-      .from('events')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(20);
+      .from('events').select('*').order('created_at', { ascending: false }).limit(20);
     if (error) throw error;
     return data || [];
   },
@@ -189,59 +179,43 @@ export const api = {
   // Memory
   getMemories: async (): Promise<Memory[]> => {
     const { data, error } = await supabase
-      .from('memory')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(30);
+      .from('memory').select('*').order('created_at', { ascending: false }).limit(50);
     if (error) throw error;
     return data || [];
   },
 
   storeMemory: async (content: string, category: string): Promise<void> => {
     const { error } = await supabase.from('memory').insert({
-      content,
-      category,
-      agent: 'user',
-      tags: [],
-      status: 'active',
+      content, category, agent: 'user', tags: [], status: 'active',
       created_at: new Date().toISOString(),
     });
     if (error) throw error;
   },
 
-  // Rooms (reads from rooms table if it exists — graceful fail)
+  // Rooms
   getRooms: async (): Promise<{ rooms: Room[] }> => {
     const { data, error } = await supabase
-      .from('rooms')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(20);
+      .from('rooms').select('*').order('created_at', { ascending: false }).limit(20);
     if (error) return { rooms: [] };
     return { rooms: data || [] };
   },
 
   getRoom: async (id: string): Promise<Room | null> => {
-    const { data, error } = await supabase
-      .from('rooms')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const { data, error } = await supabase.from('rooms').select('*').eq('id', id).single();
     if (error) return null;
     return data;
   },
 
-  // Metrics — computed from existing tables
+  // Metrics
   getMetrics: async (): Promise<Metrics> => {
     const [tasks, events, memories] = await Promise.all([
       supabase.from('tasks').select('status', { count: 'exact' }),
       supabase.from('events').select('*', { count: 'exact', head: true }),
       supabase.from('memory').select('*', { count: 'exact', head: true }),
     ]);
-
     const taskData = tasks.data || [];
     const completed = taskData.filter((t: { status: string }) => t.status === 'complete').length;
     const inProgress = taskData.filter((t: { status: string }) => t.status === 'in_progress').length;
-
     return {
       tasks_total: taskData.length,
       tasks_completed: completed,
@@ -252,10 +226,32 @@ export const api = {
     };
   },
 
+  getTaskMetrics: async (): Promise<TaskMetric[]> => {
+    const { data, error } = await supabase
+      .from('task_metrics').select('*').order('created_at', { ascending: true });
+    if (error) return [];
+    return data || [];
+  },
+
+  // Approvals
+  getApprovals: async (): Promise<Approval[]> => {
+    const { data, error } = await supabase
+      .from('approvals').select('*').order('created_at', { ascending: false });
+    if (error) return [];
+    return data || [];
+  },
+
+  resolveApproval: async (id: string, decision: 'approved' | 'rejected'): Promise<void> => {
+    const { error } = await supabase
+      .from('approvals')
+      .update({ status: decision, decided_by: 'user', decided_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) throw error;
+  },
+
   getAgentMetrics: async (_name: string) => {
     return { tasks_completed: 0, avg_review_score: 0 };
   },
 
-  // SSE / Realtime subscription
   subscribeToTask: subscribeToTaskEvents,
 };

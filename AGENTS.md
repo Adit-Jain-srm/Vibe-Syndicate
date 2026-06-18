@@ -393,6 +393,8 @@ Key insight: **Tests are grouped by DOMAIN, not by type.** `test_agents.py` cove
 - Frontend design aesthetic: Dimension-inspired glassmorphism (floating surfaces, translucency, pre-dawn color washes)
 - Wants cinematic landing that morphs into dashboard — the landing IS the dashboard, separated by scroll
 - Maximum effort on every layer simultaneously (3D, sound, motion, data) — never "pick one"
+- Do NOT use subagents for implementation — implement sequentially in the chat directly (repeated correction)
+- Prefers high-level plan references, not inline file-path-level detail in plans
 
 ## Learned Workspace Facts
 
@@ -418,6 +420,10 @@ Key insight: **Tests are grouped by DOMAIN, not by type.** `test_agents.py` cove
 - Supabase Realtime requires `ALTER publication supabase_realtime ADD TABLE <name>`
 - MagneticButton should NOT have onClick — children handle their own clicks
 - DNS on this Windows machine is slow (~13-17s per resolution) — stagger agent startups
+- DATABASE_URL in .env has stale credentials — cannot psycopg2 directly; use `supabase db push` CLI or Dashboard SQL editor for DDL
+- Supabase PostgREST does NOT support DDL — no raw SQL execution via REST API; migrations require CLI or dashboard
+- `isSwarmOnline()` must check only `active` status — seeded agents have `idle` permanently, so `idle` doesn't prove swarm is running
+- `agent_config.yaml` doesn't exist in repo — credentials load from `.env` at project root (gitignored)
 
 ### Session 3 (June 17-18, 2026) — Product Upgrade + Frontend Rebuild
 
@@ -452,6 +458,7 @@ Key insight: **Tests are grouped by DOMAIN, not by type.** `test_agents.py` cove
 - Supabase Realtime requires `ALTER publication supabase_realtime ADD TABLE <name>`
 - MagneticButton should NOT have onClick — children handle their own clicks
 - DNS on this Windows machine is slow (~13-17s per resolution) — stagger agent startups
+- Cursor subagents (Task tool) fail with `[invalid_argument]` in this workspace — execute implementation directly instead of delegating
 
 **Current deployed state:**
 - Frontend: https://syndicate-ui-five.vercel.app (auto-deploys from main)
@@ -461,12 +468,40 @@ Key insight: **Tests are grouped by DOMAIN, not by type.** `test_agents.py` cove
 - Latest commit: 3d1fd50
 
 **Open work (Phase A-I in upgrade plan):**
-- Phase A: Real Band ↔ Dashboard bridge (agents write events to Supabase)
-- Phase B: Task metrics schema + computation
-- Phase C: pgvector semantic memory
-- Phase D: Approval gates integrated with swarm workflow
-- Phase E: Pipeline page connected to real events (expandable stages)
-- Phase F: Quantified self-improvement with graphs
-- Phase G: Frontend polish (transitions, skeletons, responsive, empty states)
-- Phase H: Self-review + documentation sync
-- Phase I: E2E testing suite
+- Phase A: Real Band ↔ Dashboard bridge (agents write events to Supabase) ✓
+- Phase B: Task metrics schema + computation ✓
+- Phase C: pgvector semantic memory ✓
+- Phase D: Approval gates integrated with swarm workflow ✓
+- Phase E: Pipeline page connected to real events (expandable stages) ✓
+- Phase F: Quantified self-improvement with graphs ✓
+- Phase G: Frontend polish (transitions, skeletons, responsive, empty states) ✓
+- Phase H: Self-review + documentation sync ✓
+- Phase I: E2E testing suite ✓
+
+### Session 4 (June 18, 2026) — Product Upgrade Complete (Phases A–I)
+
+**What was built:**
+- Phase A: Dashboard now checks swarm liveness; skips simulation when real bridge is running; clear labeling
+- Phase B: MetricsEngine auto-triggered on task completion via bridge callback chain
+- Phase C: Semantic memory with Google text-embedding-004 (768-dim), pgvector cosine search, match_memories RPC
+- Phase D: Approvals page rebuilt with proper approvals table, risk-level colors, realtime, history
+- Phase E: Pipeline with expandable stages (click to reveal full content), time-between-stages calc
+- Phase F: SelfImprovementEngine wired end-to-end (bridge → metrics → self_improve → prompt evolution)
+- Phase F: Metrics page with rolling improvement trend graph + review score per task
+- Phase G: Theme toggle (dark/light), responsive bottom nav, PageTransition on all pages, SkeletonLoader variants
+- Phase H: CHANGELOG.md created, AGENTS.md updated
+- Phase I: Python imports validated, TypeScript compilation clean
+
+**Architecture decisions:**
+- Bridge → Metrics → SelfImprove chain: task completion triggers cascade automatically
+- Semantic memory uses Gemini text-embedding-004 (free) via REST API, falls back to recency if embeddings fail
+- Approvals page uses dedicated table (not events table filter), enabling proper state management
+- Sidebar splits into desktop (left rail) + mobile (bottom nav) at md breakpoint
+- Rolling pass rate uses window=3 for meaningful trends even with few tasks
+
+**Learned workspace facts (new):**
+- Google text-embedding-004 endpoint: `generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent`
+- Supabase RPC functions called via `/rest/v1/rpc/<function_name>` POST
+- motion/react AnimatePresence `mode="popLayout"` enables smooth list item removal
+- Framer Motion `layoutId` prop enables shared-element transitions across route nav indicators
+- SkeletonLoader needs variant matching actual content shape (card, text, stat) for perceived speed

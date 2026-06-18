@@ -1,12 +1,8 @@
-"""Minimal Band agent loop — proves agents can discover, invite, and message each other.
-
-This is the foundational proof that the Syndicate swarm can coordinate through Band.
-Run after agent_config.yaml is filled:
+"""Syndicate Agent Swarm — runs all Band agents with event bridge to dashboard.
 
     cd syndicate-agent
     uv run python -m syndicate_agent.main
 """
-
 from __future__ import annotations
 
 import asyncio
@@ -39,7 +35,7 @@ def _load_prompt(role: str) -> str:
 
 
 async def run_nexus(config: dict[str, dict[str, str]]) -> None:
-    """Run the Nexus conductor agent — the core coordination hub."""
+    """Run the Nexus conductor agent with reconnect-forever resilience."""
     from syndicate_agent.config import Config
 
     cfg = Config.load()
@@ -48,43 +44,53 @@ async def run_nexus(config: dict[str, dict[str, str]]) -> None:
         logger.error("Nexus agent not configured in agent_config.yaml")
         return
 
-    try:
-        from band import Agent
-        from band.adapters import LangGraphAdapter
-        from langchain_openai import ChatOpenAI
-        from langgraph.checkpoint.memory import InMemorySaver
+    attempt = 0
+    while True:
+        attempt += 1
+        try:
+            from band import Agent
+            from band.adapters import LangGraphAdapter
+            from langchain_openai import ChatOpenAI
+            from langgraph.checkpoint.memory import InMemorySaver
 
-        llm = ChatOpenAI(
-            model=cfg.gemini_model_coordinator,
-            base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
-            api_key=cfg.google_api_key,
-        )
+            llm = ChatOpenAI(
+                model=cfg.gemini_model_coordinator,
+                base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+                api_key=cfg.google_api_key,
+            )
 
-        adapter = LangGraphAdapter(
-            llm=llm,
-            checkpointer=InMemorySaver(),
-            custom_section=_load_prompt("nexus"),
-        )
+            adapter = LangGraphAdapter(
+                llm=llm,
+                checkpointer=InMemorySaver(),
+                custom_section=_load_prompt("nexus"),
+            )
 
-        agent = Agent.create(
-            adapter=adapter,
-            agent_id=nexus_creds["agent_id"],
-            api_key=nexus_creds["api_key"],
-            ws_url=cfg.band_ws_url,
-            rest_url=cfg.band_rest_url,
-        )
+            agent = Agent.create(
+                adapter=adapter,
+                agent_id=nexus_creds["agent_id"],
+                api_key=nexus_creds["api_key"],
+                ws_url=cfg.band_ws_url,
+                rest_url=cfg.band_rest_url,
+            )
 
-        logger.info("Nexus agent running — listening for tasks...")
-        await agent.run()
+            logger.info("Nexus agent running (attempt %d)...", attempt)
+            await agent.run()
 
-    except ImportError as e:
-        logger.error("Missing dependency: %s. Run 'uv sync' first.", e)
-    except Exception as e:
-        logger.error("Nexus agent failed: %s: %s", type(e).__name__, e)
+        except ImportError as e:
+            logger.error("Missing dependency: %s. Run 'uv sync' first.", e)
+            return
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            logger.warning("Nexus agent crashed (attempt %d): %s: %s", attempt, type(e).__name__, e)
+
+        delay = min(2.0 * (2 ** min(attempt - 1, 5)), 60.0)
+        logger.info("Nexus reconnecting in %.1fs...", delay)
+        await asyncio.sleep(delay)
 
 
 async def run_specialist(role: str, config: dict[str, dict[str, str]]) -> None:
-    """Run a specialist agent (architect, engineer, reviewer, etc.)."""
+    """Run a specialist agent with reconnect-forever resilience."""
     from syndicate_agent.config import Config
 
     cfg = Config.load()
@@ -93,53 +99,62 @@ async def run_specialist(role: str, config: dict[str, dict[str, str]]) -> None:
         logger.warning("Agent '%s' not configured — skipping", role)
         return
 
-    try:
-        from band import Agent
-        from band.adapters import LangGraphAdapter
-        from langchain_openai import ChatOpenAI
-        from langgraph.checkpoint.memory import InMemorySaver
+    attempt = 0
+    while True:
+        attempt += 1
+        try:
+            from band import Agent
+            from band.adapters import LangGraphAdapter
+            from langchain_openai import ChatOpenAI
+            from langgraph.checkpoint.memory import InMemorySaver
 
-        if role == "reviewer":
-            # Reviewer uses Azure OpenAI (different model family for adversarial review)
-            llm = ChatOpenAI(
-                model=cfg.azure_openai_deployment,
-                base_url=f"{cfg.azure_openai_endpoint}/openai/deployments/{cfg.azure_openai_deployment}",
-                api_key=cfg.azure_openai_api_key,
-                default_headers={"api-key": cfg.azure_openai_api_key},
-                model_kwargs={"api_version": cfg.azure_openai_api_version},
-            )
-            adapter = LangGraphAdapter(
-                llm=llm,
-                checkpointer=InMemorySaver(),
-                custom_section=_load_prompt("reviewer"),
-            )
-        else:
-            llm = ChatOpenAI(
-                model=cfg.gemini_model_specialist,
-                base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
-                api_key=cfg.google_api_key,
-            )
-            adapter = LangGraphAdapter(
-                llm=llm,
-                checkpointer=InMemorySaver(),
-                custom_section=_load_prompt(role),
+            if role == "reviewer":
+                llm = ChatOpenAI(
+                    model=cfg.azure_openai_deployment,
+                    base_url=f"{cfg.azure_openai_endpoint}/openai/deployments/{cfg.azure_openai_deployment}",
+                    api_key=cfg.azure_openai_api_key,
+                    default_headers={"api-key": cfg.azure_openai_api_key},
+                    model_kwargs={"api_version": cfg.azure_openai_api_version},
+                )
+                adapter = LangGraphAdapter(
+                    llm=llm,
+                    checkpointer=InMemorySaver(),
+                    custom_section=_load_prompt("reviewer"),
+                )
+            else:
+                llm = ChatOpenAI(
+                    model=cfg.gemini_model_specialist,
+                    base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+                    api_key=cfg.google_api_key,
+                )
+                adapter = LangGraphAdapter(
+                    llm=llm,
+                    checkpointer=InMemorySaver(),
+                    custom_section=_load_prompt(role),
+                )
+
+            agent = Agent.create(
+                adapter=adapter,
+                agent_id=creds["agent_id"],
+                api_key=creds["api_key"],
+                ws_url=cfg.band_ws_url,
+                rest_url=cfg.band_rest_url,
             )
 
-        agent = Agent.create(
-            adapter=adapter,
-            agent_id=creds["agent_id"],
-            api_key=creds["api_key"],
-            ws_url=cfg.band_ws_url,
-            rest_url=cfg.band_rest_url,
-        )
+            logger.info("%s agent running (attempt %d)...", role.capitalize(), attempt)
+            await agent.run()
 
-        logger.info("%s agent running...", role.capitalize())
-        await agent.run()
+        except ImportError as e:
+            logger.error("Missing dependency for %s: %s", role, e)
+            return
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            logger.warning("%s agent crashed (attempt %d): %s: %s", role, attempt, type(e).__name__, e)
 
-    except ImportError as e:
-        logger.error("Missing dependency for %s: %s", role, e)
-    except Exception as e:
-        logger.error("%s agent failed: %s: %s", role, type(e).__name__, e)
+        delay = min(2.0 * (2 ** min(attempt - 1, 5)), 60.0)
+        logger.info("%s reconnecting in %.1fs...", role.capitalize(), delay)
+        await asyncio.sleep(delay)
 
 
 async def run_swarm():
@@ -151,19 +166,41 @@ async def run_swarm():
         logger.error("No agents configured. Fill agent_config.yaml first.")
         return
 
-    # Initialize orchestrator for task lifecycle management
+    # Initialize orchestrator and bridge
     from syndicate_agent.orchestrator import SyndicateOrchestrator
+    from syndicate_agent.bridge import EventBridge
+    from syndicate_agent.metrics import MetricsEngine
+    from syndicate_agent.memory import MemoryEngine
+    from syndicate_agent.self_improve import SelfImprovementEngine
     from syndicate_agent.config import Config
 
     cfg = Config.load()
     orchestrator = SyndicateOrchestrator(cfg)
+    bridge = EventBridge(cfg)
+    metrics_engine = MetricsEngine(cfg)
+    memory_engine = MemoryEngine(cfg.supabase_url, cfg.supabase_key)
+    self_improve = SelfImprovementEngine(memory_engine)
+
+    bridge.set_metrics_engine(metrics_engine)
+    bridge.set_self_improve(self_improve)
+    bridge.set_memory_engine(memory_engine)
+
     import syndicate_agent
     syndicate_agent._orchestrator = orchestrator
-    logger.info("Orchestrator initialized")
+    syndicate_agent._bridge = bridge
+    syndicate_agent._metrics_engine = metrics_engine
+    logger.info("Orchestrator + EventBridge + MetricsEngine + SelfImprove initialized")
+
+    # Set all agents to idle on startup
+    for role in config:
+        await bridge.update_agent_status(role, "idle")
 
     logger.info("Starting Syndicate swarm with %d agents...", len(config))
 
     tasks = []
+
+    # Start task watcher (polls Supabase for dashboard-submitted tasks)
+    tasks.append(asyncio.create_task(bridge.watch_for_tasks()))
 
     if "nexus" in config:
         tasks.append(asyncio.create_task(run_nexus(config)))
@@ -174,7 +211,7 @@ async def run_swarm():
             tasks.append(asyncio.create_task(run_specialist(role, config)))
             await asyncio.sleep(0.5)
 
-    if not tasks:
+    if len(tasks) <= 1:
         logger.error("No agents to start")
         return
 

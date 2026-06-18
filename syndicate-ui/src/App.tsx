@@ -2,14 +2,14 @@ import { BrowserRouter, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'motion/react';
 import { useEffect, useCallback } from 'react';
 import AppRouter from './AppRouter';
-import Sidebar from './components/Sidebar';
-import ShaderBackground from './components/3d/ShaderBackground';
-import CursorGlow from './components/effects/CursorGlow';
+import ConstellationScene from './components/constellation/ConstellationScene';
+import NavigationRail from './components/constellation/NavigationRail';
 import { playSound } from './lib/sounds';
+import { useConstellationStore } from './stores/constellation';
 
 function AppShell() {
   const { pathname } = useLocation();
-  const isDashboard = pathname !== '/';
+  const initSubs = useConstellationStore(s => s.initRealtimeSubscriptions);
 
   const handleFirstInteraction = useCallback(() => {
     playSound('ambient');
@@ -21,12 +21,27 @@ function AppShell() {
     return () => document.removeEventListener('click', handleFirstInteraction);
   }, [handleFirstInteraction]);
 
+  useEffect(() => {
+    const cleanup = initSubs();
+    return cleanup;
+  }, [initSubs]);
+
+  // Sync route to constellation store for the 3D scene
+  const setCameraTarget = useConstellationStore(s => s.setCameraTarget);
+  useEffect(() => {
+    setCameraTarget(pathname);
+  }, [pathname, setCameraTarget]);
+
   return (
     <div className="noise">
-      <ShaderBackground />
-      <CursorGlow />
-      {isDashboard && <Sidebar />}
-      <main className={isDashboard ? 'ml-16' : ''}>
+      {/* Persistent 3D constellation — never unmounts */}
+      <ConstellationScene />
+
+      {/* Navigation rail (hidden on landing) */}
+      <NavigationRail />
+
+      {/* HUD overlay content — route-specific panels */}
+      <main className="relative z-10">
         <AnimatePresence mode="wait">
           <AppRouter key={pathname} />
         </AnimatePresence>

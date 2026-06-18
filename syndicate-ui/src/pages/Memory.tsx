@@ -21,6 +21,7 @@ export default function MemoryPage() {
   const [memories, setMemories] = useState<Memory[]>([]);
   const [newContent, setNewContent] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('project');
+  const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [storing, setStoring] = useState(false);
 
@@ -93,7 +94,10 @@ export default function MemoryPage() {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.06 * i }}
-                className={`rounded-xl border border-graphite/50 bg-charcoal/60 p-4`}
+                className={`rounded-xl border bg-charcoal/60 p-4 cursor-pointer transition-all ${
+                  filterCategory === cat ? 'border-current ring-1 ring-current/20' : 'border-graphite/50 hover:border-graphite'
+                }`}
+                onClick={() => setFilterCategory(filterCategory === cat ? null : cat)}
               >
                 <div className="flex items-center gap-1.5 mb-1">
                   <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
@@ -188,11 +192,24 @@ export default function MemoryPage() {
             </GlassPanel>
           ) : (
             <div className="relative">
+              {/* Filter indicator */}
+              {filterCategory && (
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-[10px] text-slate uppercase">Showing:</span>
+                  <span className={`text-[11px] px-2 py-0.5 rounded-full ${CATEGORY_COLORS[filterCategory]?.bg} ${CATEGORY_COLORS[filterCategory]?.text}`}>
+                    {filterCategory.replace(/_/g, ' ')}
+                  </span>
+                  <button onClick={() => setFilterCategory(null)} className="text-[10px] text-slate hover:text-fog ml-1">clear</button>
+                </div>
+              )}
+
               {/* Timeline line */}
               <div className="absolute left-[19px] top-4 bottom-4 w-px bg-graphite/60" />
 
               <AnimatePresence mode="popLayout">
-                {memories.map((mem, i) => {
+                {memories
+                  .filter(m => !filterCategory || m.category === filterCategory)
+                  .map((mem, i) => {
                   const style =
                     CATEGORY_COLORS[mem.category] || CATEGORY_COLORS.project;
 
