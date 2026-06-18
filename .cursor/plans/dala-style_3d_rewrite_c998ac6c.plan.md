@@ -34,7 +34,7 @@ todos:
     status: completed
   - id: verify
     content: TypeScript check + Vite build + push
-    status: in_progress
+    status: completed
 isProject: false
 ---
 

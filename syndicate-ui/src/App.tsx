@@ -33,23 +33,19 @@ function AppShell() {
   }, [pathname, setCameraTarget]);
 
   const isLanding = pathname === '/';
-  const isHUDRoute = ['/app', '/metrics', '/approvals'].includes(pathname);
 
   return (
-    <div style={{ background: '#000000', minHeight: '100dvh' }}>
-      {/* Persistent 3D brain - always visible */}
+    <>
       <ConstellationScene />
 
-      {/* Navigation (hidden on landing) */}
       {!isLanding && <NavigationRail />}
 
-      {/* Page content */}
-      <main className={`relative z-10 ${!isHUDRoute && !isLanding ? 'ml-14 min-h-screen bg-[rgba(0,0,0,0.85)]' : ''}`}>
+      <main className="relative" style={{ zIndex: 1 }}>
         <AnimatePresence mode="wait">
           <AppRouter key={pathname} />
         </AnimatePresence>
       </main>
-    </div>
+    </>
   );
 }
 
