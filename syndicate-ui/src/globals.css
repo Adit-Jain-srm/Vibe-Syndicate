@@ -16,6 +16,7 @@
   --color-muted: #4a4f58;
   --color-slate: #6b7280;
   --color-subtle: #6b7280;
+  --color-mist: #d0d6e0;
   --color-fog: #9ca3af;
   --color-dim: #9ca3af;
   --color-soft: #d1d5db;
@@ -31,7 +32,14 @@
   --color-amber: #fbbf24;
   --color-yellow: #fbbf24;
   --color-rose: #fb7185;
+  --color-crimson: #ef4444;
   --color-acid-lime: #a3e635;
+  --color-agent-nexus: #5e6ad2;
+  --color-agent-architect: #02b8cc;
+  --color-agent-engineer: #27a644;
+  --color-agent-reviewer: #eb5757;
+  --color-agent-researcher: #e4f222;
+  --color-agent-qa: #8a8f98;
   --font-display: 'Instrument Serif', Georgia, serif;
   --font-body: 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
@@ -143,3 +151,27 @@ body {
 }
 
 /* Color token aliases for Tailwind v4 theme */
+
+/* Animations for PulsingDot */
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.3; }
+  50% { transform: scale(1.8); opacity: 0; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+
+@keyframes dot-breathe {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.15); opacity: 0.8; }
+}
+
+.dot-breathing {
+  animation: dot-breathe 2.4s ease-in-out infinite;
+}
+
+/* Hover glow for cards */
+.hover-glow {
+  transition: box-shadow 0.3s ease;
+}
+.hover-glow:hover {
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.06), 0 4px 12px rgba(0, 0, 0, 0.2);
+}
