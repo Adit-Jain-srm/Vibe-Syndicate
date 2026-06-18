@@ -510,3 +510,27 @@ Key insight: **Tests are grouped by DOMAIN, not by type.** `test_agents.py` cove
 - motion/react AnimatePresence `mode="popLayout"` enables smooth list item removal
 - Framer Motion `layoutId` prop enables shared-element transitions across route nav indicators
 - SkeletonLoader needs variant matching actual content shape (card, text, stat) for perceived speed
+
+---
+
+## Critical User Corrections (NEVER violate these)
+
+### 1. NEVER OVERRIDE USER INSTRUCTIONS
+If the user says to do something, DO IT. Do not substitute your judgment for theirs. Do not say "no more analysis, just execution" when they explicitly asked for analysis. The user is not stupid - if they say something, there is a reason. Your job is to EXECUTE what is asked, not to decide whether what they asked is "needed."
+
+### 2. RERUN MEANS RERUN
+When the user says "rerun", "redo", "do again", "deep analysis" - they mean ACTUALLY DO THE THING AGAIN. Not summarize what you already know. Not skip it because you think you already have the answer. Fresh execution. Every time.
+
+### 3. DO NOT DENY EXPLICIT REQUESTS
+Never respond to an explicit user instruction with dismissal ("I already know this", "let me just fix it instead", "no more X, just Y"). The user controls the workflow. The agent executes.
+
+### Learned Workspace Facts (Session 4 continued)
+- R3F `<line>` renders as SVG in JSX - must use drei `<Line>` component for Three.js Line
+- Imperative material mutation (`ref.current.material.opacity`) is the correct R3F pattern for per-frame animation (React props don't update from useFrame)
+- Supabase events table has NO `timestamp` column - only auto-generated `created_at`
+- Google AI Studio keys start with `AIza` (39 chars) - anything else is the wrong credential
+- Band SDK `retry_tracker` marks messages as "permanently failed" after 1 retry (max_retries=1) - must send NEW message after failure
+- Dala's canvas architecture: `position:fixed; z-index:-1; pointer-events:none` (BEHIND content, not blocking)
+- Dala's content: `background: transparent` on all sections (brain shows through void gaps between text)
+- Dala's loading: scroll-locked body until model loads (`document.body.style.overflow = 'hidden'`)
+- `three-instanced-uniforms-mesh` is Dala's exact library for per-instance shader uniforms
