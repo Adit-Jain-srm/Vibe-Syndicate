@@ -424,6 +424,11 @@ Key insight: **Tests are grouped by DOMAIN, not by type.** `test_agents.py` cove
 - Supabase PostgREST does NOT support DDL — no raw SQL execution via REST API; migrations require CLI or dashboard
 - `isSwarmOnline()` must check only `active` status — seeded agents have `idle` permanently, so `idle` doesn't prove swarm is running
 - `agent_config.yaml` doesn't exist in repo — credentials load from `.env` at project root (gitignored)
+- R3F lowercase `<line>` renders as SVG element, not THREE.Line — use drei's `<Line>` component for 3D lines
+- drei `<Line>` opacity cannot be animated via React props in `useFrame` — must imperatively mutate `lineRef.current.material.opacity`
+- Supabase `events` table has auto-generated `created_at` — never include `timestamp` in POST body (causes 400 Bad Request)
+- Google AI Studio API keys start with `AIza...` (~39 chars); keys starting with `AQ.` are Supabase service_role tokens
+- Band SDK message retry limit is 1 — if agent can't process a message due to network failure, it's permanently marked failed
 
 ### Session 3 (June 17-18, 2026) — Product Upgrade + Frontend Rebuild
 
