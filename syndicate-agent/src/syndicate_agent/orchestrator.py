@@ -207,9 +207,8 @@ class SyndicateOrchestrator:
                         "agent": agent,
                         "content": content,
                         "metadata": metadata,
-                        "timestamp": datetime.now(timezone.utc).isoformat(),
                     },
-                    timeout=5.0,
+                    timeout=15.0,
                 )
             except Exception as e:
                 logger.warning("Failed to persist event: %s", e)

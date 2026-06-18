@@ -191,9 +191,11 @@ async def run_swarm():
     syndicate_agent._metrics_engine = metrics_engine
     logger.info("Orchestrator + EventBridge + MetricsEngine + SelfImprove initialized")
 
-    # Set all agents to idle on startup
+    # Set all agents to idle on startup (staggered for slow DNS)
+    logger.info("Syncing agent status to Supabase...")
     for role in config:
         await bridge.update_agent_status(role, "idle")
+        await asyncio.sleep(0.5)
 
     logger.info("Starting Syndicate swarm with %d agents...", len(config))
 

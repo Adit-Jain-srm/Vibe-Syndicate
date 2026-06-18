@@ -6,7 +6,6 @@ events to Supabase so the dashboard shows REAL collaboration data.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
 
 import httpx
 
@@ -147,7 +146,7 @@ class EventBridge:
                     f"{self.config.supabase_url}/rest/v1/agents?role=eq.{role}",
                     headers=self._headers,
                     json={"status": status},
-                    timeout=5.0,
+                    timeout=15.0,
                 )
             except Exception as e:
                 logger.warning("Failed to update agent status: %s", e)
@@ -243,9 +242,8 @@ class EventBridge:
                         "agent": agent,
                         "content": content,
                         "metadata": {},
-                        "timestamp": datetime.now(timezone.utc).isoformat(),
                     },
-                    timeout=5.0,
+                    timeout=15.0,
                 )
             except Exception as e:
                 logger.warning("Failed to emit event: %s", e)
