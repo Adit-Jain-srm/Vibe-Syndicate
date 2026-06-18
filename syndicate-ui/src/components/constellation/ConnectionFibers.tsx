@@ -22,7 +22,7 @@ function FiberConnection({ from, to, agents }: {
 }) {
   const fromAgent = agents.find(a => a.role === from);
   const toAgent = agents.find(a => a.role === to);
-  const opacityRef = useRef(0.15);
+  const lineRef = useRef<any>(null);
 
   const points = useMemo(() => {
     if (!fromAgent || !toAgent) return [];
@@ -35,20 +35,24 @@ function FiberConnection({ from, to, agents }: {
   }, [fromAgent, toAgent]);
 
   useFrame((_, delta) => {
+    if (!lineRef.current) return;
+    const mat = lineRef.current.material;
+    if (!mat) return;
     const bothActive = fromAgent?.status === 'active' || toAgent?.status === 'active';
     const target = bothActive ? 0.6 : 0.15;
-    opacityRef.current += (target - opacityRef.current) * delta * 3;
+    mat.opacity += (target - mat.opacity) * delta * 3;
   });
 
   if (points.length === 0 || !fromAgent) return null;
 
   return (
     <Line
+      ref={lineRef}
       points={points}
       color={fromAgent.color}
       lineWidth={1}
       transparent
-      opacity={opacityRef.current}
+      opacity={0.15}
     />
   );
 }

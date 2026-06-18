@@ -15,8 +15,8 @@ const CAMERA_PRESETS: Record<string, { position: [number, number, number]; lookA
   '/tasks': { position: [2, 1, 7], lookAt: [0, 0, 0] },
 };
 
-const SPRING_STIFFNESS = 3.5;
-const SPRING_DAMPING = 0.85;
+const SPRING_STIFFNESS = 4.0;
+const SPRING_DAMPING = 0.92;
 
 export default function SceneController() {
   const { camera } = useThree();
