@@ -10,11 +10,12 @@ import SceneController from './SceneController';
 
 export default function ConstellationScene() {
   return (
-    <div className="fixed inset-0 z-0">
+    <div className="fixed inset-0 z-0 pointer-events-none">
       <Canvas
         camera={{ fov: 50, near: 0.1, far: 100, position: [0, 3, 18] }}
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
         dpr={[1, 2]}
+        style={{ pointerEvents: 'none' }}
       >
         <color attach="background" args={['#050507']} />
         <fog attach="fog" args={['#050507', 18, 40]} />
