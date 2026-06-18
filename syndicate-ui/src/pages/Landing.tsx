@@ -12,16 +12,21 @@ export default function Landing() {
   useEffect(() => {
     document.body.style.overflow = 'hidden';
 
+    const minLoadTime = 2500;
+    const startTime = Date.now();
+
     gsap.to(countRef.current, {
       value: 100,
-      duration: 3,
+      duration: 2.5,
       ease: 'power2.out',
       onUpdate: () => setCount(Math.floor(countRef.current.value)),
       onComplete: () => {
+        const elapsed = Date.now() - startTime;
+        const remaining = Math.max(0, minLoadTime - elapsed);
         setTimeout(() => {
           setLoading(false);
           document.body.style.overflow = '';
-        }, 600);
+        }, remaining + 400);
       },
     });
 
@@ -66,13 +71,12 @@ export default function Landing() {
       {!loading && (
         <div>
           {/* Hero */}
-          <section className="min-h-[100dvh] flex flex-col items-center justify-center px-6">
+          <section className="min-h-[100dvh] flex flex-col items-start justify-end px-8 md:px-20 pb-20">
             <motion.h1
               initial={{ y: 30, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 1.2, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              className="text-[14vw] md:text-[9vw] font-light text-white tracking-[-0.06em] leading-[0.9]"
-              style={{ fontFamily: 'var(--font-display)' }}
+              className="text-5xl md:text-7xl font-extralight text-white tracking-[-0.04em] leading-[0.95]"
             >
               Syndicate
             </motion.h1>
@@ -80,7 +84,7 @@ export default function Landing() {
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.8, delay: 0.6 }}
-              className="text-white/40 text-sm md:text-base mt-6 tracking-wide"
+              className="text-white/35 text-sm mt-4 tracking-wide"
             >
               Compound intelligence that grows with you.
             </motion.p>

@@ -40,7 +40,7 @@
   --color-agent-reviewer: #FEAE51;
   --color-agent-researcher: #963CBD;
   --color-agent-qa: #C5299B;
-  --font-display: 'Instrument Serif', Georgia, serif;
+  --font-display: 'Inter', system-ui, -apple-system, sans-serif;
   --font-body: 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 }
@@ -56,10 +56,9 @@ body {
   overflow-x: hidden;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+/* Scrollbar - hidden for void aesthetic */
+::-webkit-scrollbar { display: none; }
+* { scrollbar-width: none; }
 
 /* Glass */
 .glass {
