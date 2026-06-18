@@ -3,23 +3,35 @@
 
 @theme {
   --color-void: #050507;
+  --color-onyx: #0a0a0c;
   --color-abyss: #0a0a0a;
   --color-deep: #0f1012;
+  --color-charcoal: #161719;
   --color-surface: #161719;
+  --color-surface-input: #161719;
   --color-elevated: #1e2024;
   --color-border: #2a2d32;
+  --color-graphite: #2a2d32;
+  --color-iron: #3a3f47;
   --color-muted: #4a4f58;
+  --color-slate: #6b7280;
   --color-subtle: #6b7280;
+  --color-fog: #9ca3af;
   --color-dim: #9ca3af;
   --color-soft: #d1d5db;
+  --color-snow: #f3f4f6;
   --color-bright: #f3f4f6;
   --color-white: #ffffff;
   --color-indigo: #6b62f2;
+  --color-accent: #6366f1;
   --color-indigo-glow: #818cf8;
+  --color-accent-glow: #818cf8;
   --color-cyan: #06b6d4;
   --color-emerald: #34d399;
   --color-amber: #fbbf24;
+  --color-yellow: #fbbf24;
   --color-rose: #fb7185;
+  --color-acid-lime: #a3e635;
   --font-display: 'Instrument Serif', Georgia, serif;
   --font-body: 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
@@ -131,17 +143,3 @@ body {
 }
 
 /* Color token aliases for Tailwind v4 theme */
-@theme {
-  --color-onyx: #0a0a0c;
-  --color-charcoal: #161719;
-  --color-graphite: #2a2d32;
-  --color-iron: #3a3f47;
-  --color-slate: #6b7280;
-  --color-fog: #9ca3af;
-  --color-snow: #f3f4f6;
-  --color-accent: #6366f1;
-  --color-accent-glow: #818cf8;
-  --color-yellow: #fbbf24;
-  --color-acid-lime: #a3e635;
-  --color-surface-input: #161719;
-}
