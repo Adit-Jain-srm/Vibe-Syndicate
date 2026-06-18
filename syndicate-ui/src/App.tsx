@@ -10,6 +10,7 @@ import { useConstellationStore } from './stores/constellation';
 function AppShell() {
   const { pathname } = useLocation();
   const initSubs = useConstellationStore(s => s.initRealtimeSubscriptions);
+  const setCameraTarget = useConstellationStore(s => s.setCameraTarget);
 
   const handleFirstInteraction = useCallback(() => {
     playSound('ambient');
@@ -24,10 +25,9 @@ function AppShell() {
   useEffect(() => {
     const cleanup = initSubs();
     return cleanup;
-  }, [initSubs]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Sync route to constellation store for the 3D scene
-  const setCameraTarget = useConstellationStore(s => s.setCameraTarget);
   useEffect(() => {
     setCameraTarget(pathname);
   }, [pathname, setCameraTarget]);
