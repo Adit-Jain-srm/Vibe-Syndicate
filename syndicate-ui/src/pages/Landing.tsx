@@ -21,8 +21,7 @@ export default function Landing() {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0, transition: { duration: 0.3 } }}
           transition={{ duration: 0.8 }}
-          className="fixed inset-0 z-20 flex flex-col items-center justify-center"
-          style={{ pointerEvents: entering ? 'none' : 'auto' }}
+          className="fixed inset-0 z-20 flex flex-col items-center justify-center pointer-events-auto"
         >
           {/* Title */}
           <motion.h1

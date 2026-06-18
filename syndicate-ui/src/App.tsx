@@ -32,16 +32,15 @@ function AppShell() {
     setCameraTarget(pathname);
   }, [pathname, setCameraTarget]);
 
+  const isHUDRoute = ['/app', '/metrics', '/approvals'].includes(pathname);
+  const isLanding = pathname === '/';
+
   return (
     <div className="noise">
-      {/* Persistent 3D constellation — never unmounts */}
       <ConstellationScene />
-
-      {/* Navigation rail (hidden on landing) */}
       <NavigationRail />
 
-      {/* HUD overlay content — route-specific panels */}
-      <main className="relative z-10">
+      <main className={`relative z-10 ${!isHUDRoute && !isLanding ? 'ml-14 min-h-screen bg-[rgba(5,5,7,0.88)] backdrop-blur-sm' : ''}`}>
         <AnimatePresence mode="wait">
           <AppRouter key={pathname} />
         </AnimatePresence>
