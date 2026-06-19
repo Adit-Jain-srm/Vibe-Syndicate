@@ -483,13 +483,14 @@ class EventBridge:
         return keywords
 
     async def update_agent_status(self, role: str, status: str):
-        """Update agent status in Supabase agents table."""
+        """Update agent status and last_seen in Supabase agents table."""
+        from datetime import datetime, timezone
         client = await self._get_client()
         try:
             await client.patch(
                 f"{self.config.supabase_url}/rest/v1/agents?role=eq.{role}",
                 headers=self._headers,
-                json={"status": status},
+                json={"status": status, "last_seen": datetime.now(timezone.utc).isoformat()},
                 timeout=15.0,
             )
         except Exception as e:
