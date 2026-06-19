@@ -45,6 +45,7 @@ export default function Metrics() {
   const passRate = completed > 0 ? Math.round((taskMetrics.filter(m => m.first_pass_rate).length / completed) * 100) : 0;
   const avgIter = completed > 0 ? +(taskMetrics.reduce((s, m) => s + m.iteration_count, 0) / completed).toFixed(1) : 0;
   const avgTime = completed > 0 ? Math.round(taskMetrics.reduce((s, m) => s + m.time_to_complete_seconds, 0) / completed) : 0;
+  const totalTokens = taskMetrics.reduce((s, m) => s + (m.tokens_used || 0), 0);
   const agentAct = ['nexus', 'architect', 'engineer', 'reviewer', 'researcher', 'qa'].map(r => ({
     role: r, count: events.filter(e => e.agent === r).length,
   }));
@@ -74,18 +75,19 @@ export default function Metrics() {
         </motion.div>
 
         {loading ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
-            {Array.from({ length: 4 }).map((_, i) => <SkeletonLoader key={i} variant="card" />)}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-10">
+            {Array.from({ length: 5 }).map((_, i) => <SkeletonLoader key={i} variant="card" />)}
           </div>
         ) : (
           <>
             {/* KPI Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-10">
               {[
                 { l: 'Tasks Complete', v: completed, icon: Zap, c: '#34d399' },
                 { l: 'First-Pass Rate', v: passRate, s: '%', icon: TrendingUp, c: '#6b62f2' },
                 { l: 'Avg Iterations', v: avgIter, icon: BarChart3, c: '#06b6d4' },
                 { l: 'Avg Time (s)', v: avgTime, icon: Clock, c: '#fbbf24' },
+                { l: 'Total Tokens', v: totalTokens > 1000 ? Math.round(totalTokens / 1000) : totalTokens, s: totalTokens > 1000 ? 'k' : '', icon: Users, c: '#fb7185' },
               ].map((k, i) => (
                 <motion.div key={k.l} initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: i * 0.08 }}>
                   <GlassPanel className="p-6">

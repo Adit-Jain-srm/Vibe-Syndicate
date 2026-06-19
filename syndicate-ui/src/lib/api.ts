@@ -208,19 +208,24 @@ export const api = {
 
   // Metrics
   getMetrics: async (): Promise<Metrics> => {
-    const [tasks, events, memories] = await Promise.all([
+    const [tasks, events, memories, taskMetrics] = await Promise.all([
       supabase.from('tasks').select('status', { count: 'exact' }),
       supabase.from('events').select('*', { count: 'exact', head: true }),
       supabase.from('memory').select('*', { count: 'exact', head: true }),
+      supabase.from('task_metrics').select('first_pass_rate'),
     ]);
     const taskData = tasks.data || [];
     const completed = taskData.filter((t: { status: string }) => t.status === 'complete').length;
     const inProgress = taskData.filter((t: { status: string }) => t.status === 'in_progress').length;
+    const metricsData = taskMetrics.data || [];
+    const passRate = metricsData.length > 0
+      ? metricsData.filter((m: { first_pass_rate: boolean }) => m.first_pass_rate).length / metricsData.length
+      : 0;
     return {
       tasks_total: taskData.length,
       tasks_completed: completed,
       tasks_in_progress: inProgress,
-      review_pass_rate: completed > 0 ? 0.85 : 0,
+      review_pass_rate: passRate,
       total_events: events.count || 0,
       memory_entries: memories.count || 0,
     };

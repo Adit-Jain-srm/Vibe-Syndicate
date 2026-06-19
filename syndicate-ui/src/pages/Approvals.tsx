@@ -40,26 +40,26 @@ export default function Approvals() {
   const pending = approvals.filter(a => a.status === 'pending');
   const resolved = approvals.filter(a => a.status !== 'pending');
 
-  const handleDecision = async (id: string, decision: 'approved' | 'rejected') => {
+  const handleDecision = async (id: string, decision: 'approved' | 'rejected' | 'approved_with_changes', comment?: string) => {
     try {
-      await api.resolveApproval(id, decision);
-      playSound(decision === 'approved' ? 'success' : 'error');
+      const status = decision === 'approved_with_changes' ? 'approved' : decision;
+      await api.resolveApproval(id, status as 'approved' | 'rejected');
+      playSound(decision.startsWith('approved') ? 'success' : 'error');
 
-      // Resume workflow: update task status based on decision
       const approval = approvals.find(a => a.id === id);
       if (approval?.task_id) {
-        const newStatus = decision === 'approved' ? 'in_progress' : 'failed';
+        const newStatus = decision.startsWith('approved') ? 'in_progress' : 'failed';
         await supabase.from('tasks').update({ status: newStatus }).eq('id', approval.task_id);
         await supabase.from('events').insert({
           task_id: approval.task_id,
-          type: `approval_${decision}`,
+          type: `approval_${status}`,
           agent: 'user',
-          content: `Human ${decision}: ${approval.title}`,
-          metadata: { approval_id: id, risk_level: approval.risk_level },
+          content: `Human ${status}${comment ? `: ${comment}` : ''}: ${approval.title}`,
+          metadata: { approval_id: id, risk_level: approval.risk_level, decision, comment: comment || null },
         });
       }
 
-      setApprovals(prev => prev.map(a => a.id === id ? { ...a, status: decision, decided_at: new Date().toISOString(), decided_by: 'user' } : a));
+      setApprovals(prev => prev.map(a => a.id === id ? { ...a, status, decided_at: new Date().toISOString(), decided_by: 'user' } : a));
     } catch {
       playSound('error');
     }
@@ -142,11 +142,27 @@ export default function Approvals() {
                         className="px-5 py-2 bg-emerald text-white text-sm rounded-xl font-medium flex items-center gap-1.5">
                         <CheckCircle size={14} /> Approve
                       </motion.button>
+                      <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={() => handleDecision(item.id, 'approved_with_changes', 'Approved with requested modifications')}
+                        className="px-5 py-2 bg-transparent border border-emerald/50 text-emerald text-sm rounded-xl font-medium flex items-center gap-1.5">
+                        <CheckCircle size={14} /> Approve with Changes
+                      </motion.button>
                       <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={() => handleDecision(item.id, 'rejected')}
                         className="px-5 py-2 bg-transparent border border-rose/50 text-rose text-sm rounded-xl font-medium flex items-center gap-1.5">
                         <XCircle size={14} /> Reject
                       </motion.button>
                     </div>
+                    {item.context && Object.keys(item.context).length > 0 && (
+                      <div className="mt-3 ml-[52px] p-3 rounded-lg bg-charcoal/40 border border-graphite/30">
+                        <p className="text-[9px] text-slate uppercase tracking-wide mb-1">Context</p>
+                        {item.context.risk_keywords && (
+                          <div className="flex gap-1 flex-wrap">
+                            {(item.context.risk_keywords as string[]).map((kw: string) => (
+                              <span key={kw} className="text-[9px] px-2 py-0.5 rounded-full bg-rose/10 text-rose font-mono">{kw}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </motion.div>
                 );
               })}

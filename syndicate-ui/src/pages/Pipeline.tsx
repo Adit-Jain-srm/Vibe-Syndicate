@@ -165,10 +165,30 @@ export default function Pipeline() {
                           <span className="text-[9px] font-mono px-2 py-0.5 rounded-full" style={{ background: `${stage.color}15`, color: stage.color }}>
                             {stage.label}
                           </span>
+                          {event.metadata?.model && (
+                            <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-accent/10 text-accent">
+                              {String(event.metadata.model)}
+                            </span>
+                          )}
+                          {event.metadata?.confidence != null && (
+                            <span className={`text-[9px] font-mono px-2 py-0.5 rounded-full ${
+                              Number(event.metadata.confidence) >= 0.8 ? 'bg-emerald/10 text-emerald' :
+                              Number(event.metadata.confidence) >= 0.5 ? 'bg-amber/10 text-amber' :
+                              'bg-rose/10 text-rose'
+                            }`}>
+                              {Math.round(Number(event.metadata.confidence) * 100)}% confident
+                            </span>
+                          )}
                           {(event.timestamp || event.created_at) && (
                             <span className="text-[9px] text-slate font-mono ml-auto">{new Date(event.timestamp || event.created_at || '').toLocaleTimeString()}</span>
                           )}
                         </div>
+                        {event.metadata?.reasoning && (
+                          <div className="mb-3 p-3 rounded-lg bg-accent/5 border border-accent/10">
+                            <p className="text-[10px] text-accent uppercase tracking-wide mb-1 font-medium">Reasoning</p>
+                            <p className="text-xs text-fog/80 leading-relaxed">{String(event.metadata.reasoning)}</p>
+                          </div>
+                        )}
                         <pre className="text-xs text-fog/90 whitespace-pre-wrap leading-relaxed font-mono bg-onyx/50 p-4 rounded-lg max-h-[300px] overflow-y-auto">
                           {event.content}
                         </pre>

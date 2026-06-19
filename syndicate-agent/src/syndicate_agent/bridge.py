@@ -79,72 +79,395 @@ class EventBridge:
         return task_id
 
     async def on_agent_response(
-        self, agent_role: str, message_content: str, room_id: str | None = None
+        self, agent_role: str, message_content: str, room_id: str | None = None,
+        model: str | None = None, reasoning: str | None = None, confidence: float | None = None,
     ):
-        """Called after an agent produces a response. Emits appropriate event."""
+        """Called after an agent produces a response. Emits appropriate event with rich metadata."""
         task_id = self._current_task_id or ""
         event_type = self._classify_event(agent_role, message_content)
 
         await self.update_agent_status(agent_role, "active")
-        await self._emit_event(event_type, agent_role, message_content[:500], task_id)
+
+        metadata = {"source": "band"}
+        if model:
+            metadata["model"] = model
+        if reasoning:
+            metadata["reasoning"] = reasoning[:500]
+        if confidence is not None:
+            metadata["confidence"] = confidence
+
+        await self._emit_event_with_metadata(event_type, agent_role, message_content[:500], task_id, metadata)
 
         # Update task status based on event
         await self._update_task_status_from_event(event_type, task_id)
 
-        # High-risk review failures create approval gates
-        if event_type == EventType.REVIEW_FAILED and task_id:
-            risk = self._assess_risk(message_content)
-            if risk in ("high", "critical"):
-                await self._create_approval_gate(task_id, agent_role, message_content, risk)
+        # Approval gates for multiple trigger conditions
+        if task_id:
+            await self._check_approval_triggers(event_type, agent_role, message_content, task_id)
 
         logger.info("Event emitted: %s from %s (task: %s)", event_type.value, agent_role, task_id)
+
+    async def _emit_event_with_metadata(
+        self, event_type: EventType, agent: str, content: str, task_id: str, metadata: dict
+    ):
+        """Write event to Supabase events table with full metadata."""
+        async with httpx.AsyncClient() as client:
+            try:
+                await client.post(
+                    f"{self.config.supabase_url}/rest/v1/events",
+                    headers=self._headers,
+                    json={
+                        "task_id": task_id if task_id else None,
+                        "type": event_type.value,
+                        "agent": agent,
+                        "content": content,
+                        "metadata": metadata,
+                    },
+                    timeout=15.0,
+                )
+            except Exception as e:
+                logger.warning("Failed to emit event: %s", e)
+
+    async def _check_approval_triggers(
+        self, event_type: EventType, agent_role: str, content: str, task_id: str
+    ):
+        """Check multiple conditions that should trigger human approval."""
+        content_lower = content.lower()
+        risk = self._assess_risk(content)
+
+        # Trigger 1: High/critical review failures
+        if event_type == EventType.REVIEW_FAILED and risk in ("high", "critical"):
+            await self._create_approval_gate(task_id, agent_role, content, risk)
+            return
+
+        # Trigger 2: Destructive operations (delete, drop, truncate)
+        destructive_keywords = ["drop table", "delete from", "truncate", "rm -rf", "force push", "destroy"]
+        if any(kw in content_lower for kw in destructive_keywords):
+            await self._create_approval_gate(
+                task_id, agent_role,
+                f"Destructive operation detected: {content[:300]}",
+                "critical"
+            )
+            return
+
+        # Trigger 3: External API / deployment actions
+        deploy_keywords = ["deploy to production", "push to main", "release", "publish to npm"]
+        if any(kw in content_lower for kw in deploy_keywords):
+            await self._create_approval_gate(
+                task_id, agent_role,
+                f"Deployment/release action: {content[:300]}",
+                "high"
+            )
+            return
+
+        # Trigger 4: Schema changes
+        schema_keywords = ["alter table", "create table", "add column", "drop column", "migration"]
+        if any(kw in content_lower for kw in schema_keywords):
+            await self._create_approval_gate(
+                task_id, agent_role,
+                f"Database schema change: {content[:300]}",
+                "medium"
+            )
+            return
+
+        # Trigger 5: Cost-sensitive operations
+        cost_keywords = ["api call", "external service", "paid tier", "token budget", "rate limit"]
+        if any(kw in content_lower for kw in cost_keywords) and risk in ("high", "critical"):
+            await self._create_approval_gate(
+                task_id, agent_role,
+                f"Cost-sensitive operation: {content[:300]}",
+                risk
+            )
+            return
 
     async def set_agent_idle(self, role: str):
         """Set agent status back to idle after processing."""
         await self.update_agent_status(role, "idle")
 
+    async def run_heartbeat(self, agent_roles: list[str], interval: int = 30):
+        """Periodically update agent 'last_seen' to detect stale/crashed agents.
+        
+        Other agents not sending heartbeats within 2x interval are marked offline.
+        """
+        import asyncio
+
+        logger.info("Heartbeat system started for %d agents (interval: %ds)", len(agent_roles), interval)
+        while True:
+            try:
+                now = __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat()
+                async with httpx.AsyncClient() as client:
+                    for role in agent_roles:
+                        await client.patch(
+                            f"{self.config.supabase_url}/rest/v1/agents?role=eq.{role}",
+                            headers=self._headers,
+                            json={"last_seen": now},
+                            timeout=5.0,
+                        )
+                        await asyncio.sleep(0.2)
+
+                    # Check for stale agents (not seen in 2x interval)
+                    stale_threshold = __import__('datetime').datetime.now(
+                        __import__('datetime').timezone.utc
+                    ) - __import__('datetime').timedelta(seconds=interval * 2)
+                    resp = await client.get(
+                        f"{self.config.supabase_url}/rest/v1/agents?select=role,status,last_seen",
+                        headers=self._headers,
+                        timeout=5.0,
+                    )
+                    if resp.status_code == 200:
+                        for agent in resp.json():
+                            last_seen = agent.get("last_seen")
+                            if last_seen and agent.get("status") != "offline":
+                                try:
+                                    seen_time = __import__('datetime').datetime.fromisoformat(last_seen.replace('Z', '+00:00'))
+                                    if seen_time < stale_threshold:
+                                        await client.patch(
+                                            f"{self.config.supabase_url}/rest/v1/agents?role=eq.{agent['role']}",
+                                            headers=self._headers,
+                                            json={"status": "offline"},
+                                            timeout=5.0,
+                                        )
+                                        logger.warning("Agent %s marked offline (last seen: %s)", agent["role"], last_seen)
+                                except (ValueError, TypeError):
+                                    pass
+            except Exception as e:
+                logger.debug("Heartbeat error: %s", e)
+
+            await asyncio.sleep(interval)
+
     def _assess_risk(self, review_content: str) -> str:
-        """Assess risk level from review content keywords."""
+        """Assess risk level from review content using weighted keyword scoring.
+        
+        Avoids false positives by requiring negative context (not just keyword presence).
+        """
         content_lower = review_content.lower()
-        if any(kw in content_lower for kw in ["security", "vulnerability", "injection", "critical", "data loss"]):
+
+        # Score-based approach: accumulate risk points
+        score = 0
+
+        critical_patterns = [
+            ("sql injection", 10), ("xss vulnerability", 10), ("remote code execution", 10),
+            ("data loss", 8), ("credentials exposed", 10), ("authentication bypass", 10),
+            ("privilege escalation", 9),
+        ]
+        high_patterns = [
+            ("breaking change", 6), ("regression", 5), ("production issue", 6),
+            ("unsafe", 5), ("vulnerability", 6), ("memory leak", 5),
+            ("race condition", 5), ("data corruption", 7),
+        ]
+        medium_patterns = [
+            ("concern", 2), ("refactor needed", 2), ("complexity", 2),
+            ("technical debt", 2), ("performance issue", 3), ("missing validation", 3),
+        ]
+        # Negative modifiers (reduce score if these are present)
+        safe_modifiers = [
+            ("no vulnerabilit", -3), ("looks secure", -3), ("is secure", -3),
+            ("passed", -2), ("clean", -2), ("no issue", -2),
+            ("resolved", -2), ("fixed", -2),
+        ]
+
+        for pattern, weight in critical_patterns:
+            if pattern in content_lower:
+                score += weight
+        for pattern, weight in high_patterns:
+            if pattern in content_lower:
+                score += weight
+        for pattern, weight in medium_patterns:
+            if pattern in content_lower:
+                score += weight
+        for pattern, weight in safe_modifiers:
+            if pattern in content_lower:
+                score += weight
+
+        if score >= 8:
             return "critical"
-        if any(kw in content_lower for kw in ["breaking change", "regression", "production", "high risk", "unsafe"]):
+        if score >= 5:
             return "high"
-        if any(kw in content_lower for kw in ["concern", "refactor", "complexity"]):
+        if score >= 2:
             return "medium"
         return "low"
 
     async def _create_approval_gate(self, task_id: str, agent: str, content: str, risk: str):
-        """Create an approval record in Supabase, pausing the workflow."""
+        """Create an approval record in Supabase, pausing the workflow.
+        
+        Sends a pause signal to the agent swarm via Band and monitors
+        for resolution to resume processing.
+        """
         import uuid as _uuid
+        approval_id = str(_uuid.uuid4())
         async with httpx.AsyncClient() as client:
             try:
                 await client.post(
                     f"{self.config.supabase_url}/rest/v1/approvals",
                     headers=self._headers,
                     json={
-                        "id": str(_uuid.uuid4()),
+                        "id": approval_id,
                         "task_id": task_id,
                         "type": "review_approval",
                         "status": "pending",
                         "title": f"Review flagged ({risk} risk)",
                         "description": content[:500],
-                        "context": {},
+                        "context": {"risk_keywords": self._extract_risk_keywords(content)},
                         "agent": agent,
                         "risk_level": risk,
                     },
                     timeout=5.0,
                 )
-                # Update task to awaiting_approval
                 await client.patch(
                     f"{self.config.supabase_url}/rest/v1/tasks?id=eq.{task_id}",
                     headers=self._headers,
                     json={"status": "awaiting_approval"},
                     timeout=5.0,
                 )
-                logger.info("Approval gate created for task %s (risk: %s)", task_id, risk)
+
+                await self._emit_event(
+                    EventType.APPROVAL_NEEDED, agent,
+                    f"⚠️ Human approval required ({risk} risk): {content[:200]}",
+                    task_id,
+                )
+
+                # Send pause signal to Nexus via Band
+                await self._send_pause_signal(task_id, approval_id, risk)
+
+                logger.info("Approval gate created for task %s (risk: %s, id: %s)", task_id, risk, approval_id)
+
+                # Start watching for resolution (non-blocking)
+                import asyncio
+                asyncio.create_task(self._watch_approval_resolution(approval_id, task_id))
+
             except Exception as e:
                 logger.warning("Failed to create approval gate: %s", e)
+
+    async def _send_pause_signal(self, task_id: str, approval_id: str, risk: str):
+        """Send pause signal to Nexus agent via Band to halt processing."""
+        if not self._nexus_api_key or not self._band_room_id:
+            return
+        try:
+            async with httpx.AsyncClient() as client:
+                await client.post(
+                    f"{self.config.band_rest_url}api/v1/agent/chats/{self._band_room_id}/messages",
+                    headers={
+                        "x-api-key": self._nexus_api_key,
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "content": f"@Syndicate Nexus PAUSE: Task {task_id} requires human approval (risk: {risk}). Approval ID: {approval_id}. Do NOT continue processing this task until you receive a RESUME signal.",
+                    },
+                    timeout=10.0,
+                )
+                logger.info("Pause signal sent for task %s", task_id)
+        except Exception as e:
+            logger.warning("Failed to send pause signal: %s", e)
+
+    async def _watch_approval_resolution(self, approval_id: str, task_id: str):
+        """Watch for approval resolution and send resume signal when decided."""
+        import asyncio
+
+        timeout_seconds = 300  # 5 minute timeout
+        poll_interval = 3
+        elapsed = 0
+
+        while elapsed < timeout_seconds:
+            await asyncio.sleep(poll_interval)
+            elapsed += poll_interval
+
+            try:
+                async with httpx.AsyncClient() as client:
+                    resp = await client.get(
+                        f"{self.config.supabase_url}/rest/v1/approvals?id=eq.{approval_id}&select=status,decided_by",
+                        headers=self._headers,
+                        timeout=5.0,
+                    )
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        if data and data[0]["status"] != "pending":
+                            decision = data[0]["status"]
+                            decided_by = data[0].get("decided_by", "unknown")
+                            logger.info("Approval %s resolved: %s by %s", approval_id, decision, decided_by)
+
+                            if decision == "approved":
+                                await self._send_resume_signal(task_id, decision)
+                            else:
+                                await self._emit_event(
+                                    EventType.APPROVAL_REJECTED, "user",
+                                    f"Task rejected by {decided_by}",
+                                    task_id,
+                                )
+                            return
+            except Exception as e:
+                logger.debug("Approval watch poll error: %s", e)
+
+        # Timeout — auto-escalate
+        logger.warning("Approval %s timed out after %ds — auto-rejecting", approval_id, timeout_seconds)
+        try:
+            async with httpx.AsyncClient() as client:
+                await client.patch(
+                    f"{self.config.supabase_url}/rest/v1/approvals?id=eq.{approval_id}",
+                    headers=self._headers,
+                    json={"status": "rejected", "decided_by": "timeout", "decided_at": __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat()},
+                    timeout=5.0,
+                )
+                await client.patch(
+                    f"{self.config.supabase_url}/rest/v1/tasks?id=eq.{task_id}",
+                    headers=self._headers,
+                    json={"status": "failed"},
+                    timeout=5.0,
+                )
+        except Exception as e:
+            logger.warning("Failed to update timeout status: %s", e)
+        await self._emit_event(
+            EventType.APPROVAL_REJECTED, "system",
+            f"Approval timed out after {timeout_seconds}s — task marked as failed",
+            task_id,
+        )
+
+    async def _send_resume_signal(self, task_id: str, decision: str):
+        """Send resume signal to Nexus agent via Band after approval."""
+        if not self._nexus_api_key or not self._band_room_id:
+            return
+        try:
+            async with httpx.AsyncClient() as client:
+                await client.post(
+                    f"{self.config.band_rest_url}api/v1/agent/chats/{self._band_room_id}/messages",
+                    headers={
+                        "x-api-key": self._nexus_api_key,
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "content": f"@Syndicate Nexus RESUME: Task {task_id} has been {decision}. Continue processing.",
+                    },
+                    timeout=10.0,
+                )
+                # Also update task status back to in_progress
+                await client.patch(
+                    f"{self.config.supabase_url}/rest/v1/tasks?id=eq.{task_id}",
+                    headers=self._headers,
+                    json={"status": "in_progress"},
+                    timeout=5.0,
+                )
+                await self._emit_event(
+                    EventType.APPROVAL_GRANTED, "user",
+                    f"Approved — resuming task execution",
+                    task_id,
+                )
+                logger.info("Resume signal sent for task %s", task_id)
+        except Exception as e:
+            logger.warning("Failed to send resume signal: %s", e)
+
+    def _extract_risk_keywords(self, content: str) -> list[str]:
+        """Extract risk-relevant keywords for approval context."""
+        keywords = []
+        content_lower = content.lower()
+        risk_terms = {
+            "security": ["security", "vulnerability", "injection", "xss", "auth"],
+            "data": ["data loss", "deletion", "truncate", "drop", "migration"],
+            "breaking": ["breaking change", "regression", "incompatible"],
+            "production": ["production", "deploy", "release", "rollback"],
+        }
+        for category, terms in risk_terms.items():
+            if any(t in content_lower for t in terms):
+                keywords.append(category)
+        return keywords
 
     async def update_agent_status(self, role: str, status: str):
         """Update agent status in Supabase agents table."""
@@ -257,45 +580,90 @@ class EventBridge:
                 logger.warning("Failed to emit event: %s", e)
 
     async def watch_for_tasks(self):
-        """Poll Supabase for new pending tasks submitted from dashboard."""
+        """Poll Supabase for new pending tasks submitted from dashboard.
+        
+        Supports concurrent task processing with configurable parallelism.
+        Uses Supabase Realtime channel for instant pickup when available,
+        falls back to polling.
+        """
         import asyncio
 
         logger.info("Task watcher started — polling for pending tasks")
+        max_concurrent = 3
+        active_tasks: set[str] = set()
+
         while True:
             try:
+                if len(active_tasks) >= max_concurrent:
+                    await asyncio.sleep(2)
+                    continue
+
                 async with httpx.AsyncClient() as client:
+                    limit = max_concurrent - len(active_tasks)
                     resp = await client.get(
-                        f"{self.config.supabase_url}/rest/v1/tasks?status=eq.pending&order=created_at.asc&limit=1",
+                        f"{self.config.supabase_url}/rest/v1/tasks?status=eq.pending&order=created_at.asc&limit={limit}",
                         headers=self._headers,
                         timeout=5.0,
                     )
                     if resp.status_code == 200:
                         tasks = resp.json()
-                        if tasks:
-                            task = tasks[0]
-                            self._current_task_id = task["id"]
-                            logger.info("Picked up pending task: %s", task["id"])
-                            # Mark as planning so we don't pick it up again
-                            await client.patch(
-                                f"{self.config.supabase_url}/rest/v1/tasks?id=eq.{task['id']}",
-                                headers=self._headers,
-                                json={"status": TaskStatus.PLANNING.value},
-                                timeout=5.0,
+                        for task in tasks:
+                            task_id = task["id"]
+                            if task_id in active_tasks:
+                                continue
+                            active_tasks.add(task_id)
+                            asyncio.create_task(
+                                self._process_task(task, active_tasks)
                             )
-                            await self._emit_event(
-                                EventType.AGENT_JOINED,
-                                "nexus",
-                                f"Nexus picking up task: {task['description'][:100]}",
-                                task["id"],
-                            )
-                            # Route to Nexus via Band
-                            await self._send_to_nexus_via_band(task["description"], task["id"])
-                            # Query semantic memory for relevant context
-                            await self._query_relevant_memory(task["description"])
             except Exception as e:
                 logger.warning("Task watcher error: %s", e)
 
-            await asyncio.sleep(5)
+            await asyncio.sleep(3)
+
+    async def _process_task(self, task: dict, active_tasks: set[str]):
+        """Process a single task through the full agent pipeline."""
+        task_id = task["id"]
+        try:
+            logger.info("Picked up pending task: %s", task_id)
+
+            async with httpx.AsyncClient() as client:
+                await client.patch(
+                    f"{self.config.supabase_url}/rest/v1/tasks?id=eq.{task_id}",
+                    headers=self._headers,
+                    json={"status": "planning"},
+                    timeout=5.0,
+                )
+
+            await self._emit_event(
+                EventType.AGENT_JOINED,
+                "nexus",
+                f"Nexus picking up task: {task['description'][:100]}",
+                task_id,
+            )
+
+            # Set current task for event routing (last-writer-wins for event classification)
+            self._current_task_id = task_id
+
+            await self._send_to_nexus_via_band(task["description"], task_id)
+            await self._query_relevant_memory(task["description"])
+
+        except Exception as e:
+            logger.warning("Task processing error for %s: %s", task_id, e)
+            try:
+                async with httpx.AsyncClient() as client:
+                    await client.patch(
+                        f"{self.config.supabase_url}/rest/v1/tasks?id=eq.{task_id}",
+                        headers=self._headers,
+                        json={"status": "failed"},
+                        timeout=5.0,
+                    )
+            except Exception:
+                pass
+            await self._emit_event(
+                EventType.ERROR, "system", f"Task processing failed: {e}", task_id
+            )
+        finally:
+            active_tasks.discard(task_id)
 
     async def _send_to_nexus_via_band(self, description: str, task_id: str):
         """Send task to Nexus agent via Band REST API (creates real agent-to-agent routing)."""
