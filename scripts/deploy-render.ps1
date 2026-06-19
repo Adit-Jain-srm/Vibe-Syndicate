@@ -22,6 +22,7 @@ Get-Content $envFile | ForEach-Object {
 }
 
 $agentYaml = Get-Content $agentConfig -Raw
+$agentYamlB64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($agentYaml))
 
 $required = @(
     "GOOGLE_API_KEY", "SUPABASE_URL", "SUPABASE_KEY",
@@ -41,7 +42,8 @@ if (-not $renderApiKey) {
     Write-Host "3. Connect repo: Adit-Jain-srm/Vibe-Syndicate"
     Write-Host "4. When prompted for secret env vars, paste these values:"
     Write-Host ""
-    Write-Host "   AGENT_CONFIG_YAML = (full contents of agent_config.yaml)"
+    Write-Host "   AGENT_CONFIG_YAML_B64 = (recommended — single-line base64 of agent_config.yaml)"
+    Write-Host "   AGENT_CONFIG_YAML     = (alternative — paste full yaml contents)"
     Write-Host "   GOOGLE_API_KEY    = $($envVars['GOOGLE_API_KEY'].Substring(0, [Math]::Min(8, $envVars['GOOGLE_API_KEY'].Length)))..."
     Write-Host "   SUPABASE_URL      = $($envVars['SUPABASE_URL'])"
     Write-Host "   SUPABASE_KEY      = (service_role key from .env)"
@@ -59,9 +61,11 @@ if (-not $renderApiKey) {
 # Paste these into Render dashboard Environment tab
 # DO NOT COMMIT THIS FILE
 
-AGENT_CONFIG_YAML<<EOF
-$agentYaml
-EOF
+AGENT_CONFIG_YAML_B64=$agentYamlB64
+
+# Alternative (multiline — use if B64 not supported):
+# AGENT_CONFIG_YAML:
+# $agentYaml
 
 GOOGLE_API_KEY=$($envVars['GOOGLE_API_KEY'])
 SUPABASE_URL=$($envVars['SUPABASE_URL'])

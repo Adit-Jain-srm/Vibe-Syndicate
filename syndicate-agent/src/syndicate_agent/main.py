@@ -22,7 +22,14 @@ logger = logging.getLogger("syndicate")
 
 def _load_config() -> dict[str, dict[str, str]]:
     """Load agent credentials from AGENT_CONFIG_YAML env or agent_config.yaml file."""
+    import base64
+
     yaml_content = os.environ.get("AGENT_CONFIG_YAML")
+    if not yaml_content:
+        b64 = os.environ.get("AGENT_CONFIG_YAML_B64")
+        if b64:
+            yaml_content = base64.b64decode(b64).decode("utf-8")
+
     if yaml_content:
         data = yaml.safe_load(yaml_content) or {}
     else:
