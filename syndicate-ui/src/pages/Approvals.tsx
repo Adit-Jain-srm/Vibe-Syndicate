@@ -44,6 +44,21 @@ export default function Approvals() {
     try {
       await api.resolveApproval(id, decision);
       playSound(decision === 'approved' ? 'success' : 'error');
+
+      // Resume workflow: update task status based on decision
+      const approval = approvals.find(a => a.id === id);
+      if (approval?.task_id) {
+        const newStatus = decision === 'approved' ? 'in_progress' : 'failed';
+        await supabase.from('tasks').update({ status: newStatus }).eq('id', approval.task_id);
+        await supabase.from('events').insert({
+          task_id: approval.task_id,
+          type: `approval_${decision}`,
+          agent: 'user',
+          content: `Human ${decision}: ${approval.title}`,
+          metadata: { approval_id: id, risk_level: approval.risk_level },
+        });
+      }
+
       setApprovals(prev => prev.map(a => a.id === id ? { ...a, status: decision, decided_at: new Date().toISOString(), decided_by: 'user' } : a));
     } catch {
       playSound('error');

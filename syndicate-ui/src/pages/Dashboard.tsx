@@ -106,15 +106,14 @@ export default function Dashboard() {
     try {
       const task = await api.createTask(taskInput);
       setLastTaskId(task.id);
+      const desc = taskInput;
       setTaskInput('');
       playSound('success');
 
-      if (!swarmLive) {
-        setIsSimulated(true);
-        simulateSwarmExecution(task.id, taskInput);
-      } else {
-        setIsSimulated(false);
-      }
+      // Always run simulation for visual feedback
+      // If swarm is live, the bridge will ALSO pick up the task
+      setIsSimulated(!swarmLive);
+      simulateSwarmExecution(task.id, desc);
 
       const updated = await api.getTasks();
       setTasks(updated);
@@ -233,15 +232,35 @@ export default function Dashboard() {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-4 text-sm flex items-center gap-2"
+              className="mt-4"
             >
-              <span className="w-2 h-2 rounded-full bg-[var(--color-emerald)] animate-pulse" />
-              <span className="text-[var(--color-emerald)]">
-                Task submitted — {isSimulated ? 'simulating agent workflow' : 'swarm processing live'}. ID: {lastTaskId}
-              </span>
-              {isSimulated && (
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--color-accent)]/10 text-[var(--color-accent)]">simulated</span>
-              )}
+              <div className="flex items-center gap-2 mb-3">
+                <span className="w-2 h-2 rounded-full bg-[var(--color-emerald)] animate-pulse" />
+                <span className="text-sm text-[var(--color-emerald)]">
+                  Task submitted — {isSimulated ? 'simulating agent workflow' : 'swarm processing live'}
+                </span>
+                {isSimulated && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--color-accent)]/10 text-[var(--color-accent)]">simulated</span>
+                )}
+              </div>
+              <p className="text-[10px] text-[var(--color-slate)] font-mono mb-2">ID: {lastTaskId}</p>
+              <a href={`/pipeline`} className="text-[10px] text-[var(--color-accent)] hover:underline mb-3 inline-block">View full pipeline →</a>
+              {/* Progress stages */}
+              <div className="flex gap-1 items-center">
+                {['pending', 'planning', 'in_progress', 'reviewing', 'complete'].map((stage) => {
+                  const task = tasks.find(t => t.id === lastTaskId);
+                  const currentIdx = ['pending', 'planning', 'in_progress', 'reviewing', 'complete'].indexOf(task?.status || 'pending');
+                  const stageIdx = ['pending', 'planning', 'in_progress', 'reviewing', 'complete'].indexOf(stage);
+                  const done = stageIdx <= currentIdx;
+                  return (
+                    <div key={stage} className="flex items-center gap-1">
+                      <div className={`w-2 h-2 rounded-full ${done ? 'bg-[var(--color-emerald)]' : 'bg-[var(--color-iron)]'}`} />
+                      <span className={`text-[9px] ${done ? 'text-[var(--color-fog)]' : 'text-[var(--color-muted)]'}`}>{stage.replace('_', ' ')}</span>
+                      {stage !== 'complete' && <span className="text-[var(--color-iron)] text-[8px] mx-1">→</span>}
+                    </div>
+                  );
+                })}
+              </div>
             </motion.div>
           )}
         </motion.div>

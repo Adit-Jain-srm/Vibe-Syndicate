@@ -115,6 +115,30 @@ TOOLS = [
             "required": ["skill_name"],
         },
     },
+    {
+        "name": "syn_approve",
+        "description": "Approve or reject a pending human-in-the-loop decision.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "approval_id": {"type": "string", "description": "ID of the approval to resolve"},
+                "decision": {"type": "string", "enum": ["approved", "rejected"], "description": "Your decision"},
+            },
+            "required": ["approval_id", "decision"],
+        },
+    },
+    {
+        "name": "syn_events",
+        "description": "Get recent events for a task (shows agent activity, decisions, progress).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "task_id": {"type": "string", "description": "Task ID to get events for"},
+                "limit": {"type": "integer", "description": "Max events to return (default 20)"},
+            },
+            "required": ["task_id"],
+        },
+    },
 ]
 
 
@@ -269,6 +293,50 @@ async def handle_tool(name: str, args: dict) -> str:
                     "size": len(content),
                 })
         return json.dumps({"error": f"Skill '{skill_name}' not found"})
+
+    elif name == "syn_approve":
+        approval_id = args["approval_id"]
+        decision = args["decision"]
+        if SUPABASE_URL:
+            async with httpx.AsyncClient() as c:
+                r = await c.patch(
+                    f"{SUPABASE_URL}/rest/v1/approvals?id=eq.{approval_id}",
+                    headers={**HEADERS, "Prefer": "return=representation"},
+                    json={"status": decision, "decided_by": "mcp_user", "decided_at": __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat()},
+                    timeout=10.0,
+                )
+                if r.status_code == 200:
+                    data = r.json()
+                    if data:
+                        task_id = data[0].get("task_id", "")
+                        new_status = "in_progress" if decision == "approved" else "failed"
+                        await c.patch(
+                            f"{SUPABASE_URL}/rest/v1/tasks?id=eq.{task_id}",
+                            headers=HEADERS,
+                            json={"status": new_status},
+                            timeout=10.0,
+                        )
+                        await c.post(
+                            f"{SUPABASE_URL}/rest/v1/events",
+                            headers=HEADERS,
+                            json={"task_id": task_id, "type": f"approval_{decision}", "agent": "user", "content": f"Approval {decision} via MCP", "metadata": {}},
+                            timeout=10.0,
+                        )
+                        return json.dumps({"status": decision, "task_id": task_id, "task_status": new_status})
+        return json.dumps({"error": "Failed to resolve approval"})
+
+    elif name == "syn_events":
+        task_id = args["task_id"]
+        limit = args.get("limit", 20)
+        if SUPABASE_URL:
+            async with httpx.AsyncClient() as c:
+                r = await c.get(
+                    f"{SUPABASE_URL}/rest/v1/events?task_id=eq.{task_id}&select=type,agent,content,created_at&order=created_at.asc&limit={limit}",
+                    headers=HEADERS, timeout=10.0,
+                )
+                if r.status_code == 200:
+                    return json.dumps({"events": r.json(), "task_id": task_id})
+        return json.dumps({"events": [], "task_id": task_id})
 
     return json.dumps({"error": f"Unknown tool: {name}"})
 
