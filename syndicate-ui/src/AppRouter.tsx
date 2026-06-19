@@ -10,6 +10,7 @@ const Tasks = lazy(() => import('./pages/Tasks'));
 const Memory = lazy(() => import('./pages/Memory'));
 const Metrics = lazy(() => import('./pages/Metrics'));
 const Approvals = lazy(() => import('./pages/Approvals'));
+const Docs = lazy(() => import('./pages/Docs'));
 
 function Loading() {
   return (
@@ -33,6 +34,7 @@ export default function AppRouter() {
         <Route path="/memory" element={<Memory />} />
         <Route path="/metrics" element={<Metrics />} />
         <Route path="/approvals" element={<Approvals />} />
+        <Route path="/docs" element={<Docs />} />
       </Routes>
     </Suspense>
   );

@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { path: '/memory', label: 'Memory', color: '#8b5cf6' },
   { path: '/approvals', label: 'Approvals', color: '#fb7185' },
   { path: '/agents', label: 'Agents', color: '#9ca3af' },
+  { path: '/docs', label: 'Docs', color: '#d1d5db' },
 ];
 
 export default function NavigationRail() {
