@@ -1,6 +1,6 @@
 <p align="center">
   <h1 align="center">Syndicate</h1>
-  <p align="center"><strong>Compound intelligence for developers</strong> — a self-improving multi-agent swarm that grows with you.</p>
+  <p align="center"><strong>Compound intelligence for developers</strong> - a self-improving multi-agent swarm that grows with you.</p>
 </p>
 
 <p align="center">
@@ -12,29 +12,31 @@
 </p>
 
 <p align="center">
-  <strong>Band of Agents Hackathon</strong> · June 12–19, 2026 · <a href="https://lablab.ai/ai-hackathons/band-of-agents-hackathon">lablab.ai</a>
+  <a href="https://syndicate-ui-five.vercel.app">Live Demo</a> -
+  <a href="https://lablab.ai/ai-hackathons/band-of-agents-hackathon">Hackathon</a> -
+  <a href="docs/DEMO_SCRIPT.md">Demo Script</a>
 </p>
 
 ---
 
 ## What is Syndicate?
 
-Syndicate is a multi-agent developer orchestration platform where **6 specialized AI agents** collaborate through [Band](https://band.ai) rooms to deliver complete software workflows — from project initialization through deployment.
+Syndicate is a multi-agent developer orchestration platform where **6 specialized AI agents** collaborate through [Band](https://band.ai) rooms to deliver complete software workflows.
 
 Unlike existing AI tools that start fresh every session, Syndicate **accumulates intelligence**: every task makes it better at the next one.
 
 ```mermaid
 flowchart TB
     subgraph user [User Surfaces]
-        MCP["MCP Server (syn_*)"]
-        CLI["CLI"]
+        MCP["MCP Server (9 tools)"]
         Dashboard["Web Dashboard"]
     end
 
     subgraph core [Core Engine]
         Nexus["Nexus (Conductor)"]
-        Memory["Memory Engine"]
-        Skills["Skill Engine"]
+        Memory["Memory Engine (pgvector)"]
+        Metrics["Metrics Engine"]
+        SelfImprove["Self-Improvement"]
     end
 
     subgraph band [Band.ai Coordination]
@@ -50,220 +52,215 @@ flowchart TB
     end
 
     MCP --> Nexus
-    CLI --> Nexus
     Dashboard --> Nexus
     Nexus --> Memory
-    Nexus --> Skills
+    Nexus --> Metrics
     Nexus --> Rooms
     Rooms --> Arch
     Rooms --> Eng
     Rooms --> Rev
     Rooms --> Res
     Rooms --> QA_agent
+    Metrics --> SelfImprove
+    SelfImprove --> Memory
 ```
 
 ## Task Lifecycle
 
 ```mermaid
 sequenceDiagram
-    participant U as User (Cursor/CLI)
+    participant U as User (Cursor/Dashboard)
+    participant B as Bridge
     participant N as Nexus
     participant A as Architect
     participant E as Engineer (Gemini)
     participant R as Reviewer (GPT-4o)
+    participant M as Metrics
 
-    U->>N: syn_task "add auth"
-    N->>A: @Architect — plan this task
-    A->>N: Plan ready (3 subtasks)
-    N->>E: @Engineer — implement st-1
+    U->>B: Submit task
+    B->>N: Route via Band room
+    N->>A: @Architect - plan this task
+    A->>N: Plan ready (subtasks)
+    N->>E: @Engineer - implement
     E->>R: Code ready for review
-    R->>N: Review PASSED (risk: low)
-    N->>U: Task complete ✓
+    R->>N: Review PASSED
+    N->>B: Task complete
+    B->>M: Compute metrics
+    M->>M: Self-improvement cycle
 ```
-
-## Self-Improvement Loop
-
-```mermaid
-flowchart LR
-    Execute["Execute Task"] --> Review["Review Outcome"]
-    Review --> Extract["Extract Lessons"]
-    Extract --> Memory["Update Memory"]
-    Memory --> Evolve["Evolve Skills"]
-    Evolve --> Execute
-```
-
-## Memory Architecture
-
-```mermaid
-flowchart TB
-    subgraph layers [Three Memory Layers]
-        Protocol["Protocol State\n(per-task, ephemeral)"]
-        Project["Project Memory\n(conventions, permanent)"]
-        Agent["Agent Learning\n(cross-task, permanent)"]
-    end
-    
-    subgraph storage [Storage]
-        Supabase["Supabase (primary)"]
-        JSONL["Local JSONL (backup)"]
-    end
-
-    Protocol --> Supabase
-    Project --> Supabase
-    Agent --> Supabase
-    Protocol --> JSONL
-    Project --> JSONL
-    Agent --> JSONL
-```
-
-## Why Syndicate?
-
-| Problem | Syndicate Solution |
-|---------|-------------------|
-| AI tools are stateless — context lost every session | Persistent memory compounds across tasks and sessions |
-| Single models have blind spots | Cross-model adversarial review (Gemini writes, GPT-4o reviews) |
-| Planning, coding, reviewing are fragmented | Unified multi-agent lifecycle with visible handoffs |
-| AI never learns your codebase | Project memory stores conventions, gotchas, architecture decisions |
-| No visibility into AI collaboration | Real-time dashboard shows agent-to-agent work live |
 
 ## Agent Roster
 
 | Agent | Role | Model | What It Does |
 |-------|------|-------|-------------|
-| **Nexus** | Conductor | Gemini 2.5 Flash | Routes tasks, discovers peers, tracks protocol state |
+| **Nexus** | Conductor | Gemini 2.5 Flash | Routes tasks, discovers peers, tracks state |
 | **Architect** | Planner | Gemini 2.5 Flash | Decomposes tasks into structured subtasks |
-| **Engineer** | Coder | Gemini 2.5 Flash | Implements code in isolated workspaces |
-| **Reviewer** | Quality Gate | Azure OpenAI GPT-4o | Adversarial cross-model code review |
-| **Researcher** | Discovery | Gemini 2.5 Flash | Web research, tool discovery, prior art |
+| **Engineer** | Coder | Gemini 2.5 Flash | Implements code from assignments |
+| **Reviewer** | Quality Gate | Azure OpenAI GPT-4o | Adversarial cross-model review |
+| **Researcher** | Discovery | Gemini 2.5 Flash | Web research, tool finding |
 | **QA** | Validator | Gemini 2.5 Flash | Testing and verification |
 
-All agents communicate through **Band rooms** with @mention routing. Cross-model review is mandatory — the reviewer always runs on a different model family than the engineer.
+All agents communicate through **Band rooms** with @mention routing. The reviewer always runs on a **different model family** than the engineer (Gemini writes, GPT-4o reviews).
 
 ## Quick Start
 
 ```bash
-# Prerequisites: Python 3.12+, Node 20+, uv
+# Prerequisites: Python 3.12+, Node 20+
 git clone https://github.com/Adit-Jain-srm/Vibe-Syndicate.git
 cd Vibe-Syndicate
 
 # Environment
 cp .env.example .env
-# Fill in: GOOGLE_API_KEY, AZURE_OPENAI_API_KEY, CLERK keys, SUPABASE keys
+# Fill: GOOGLE_API_KEY, AZURE_OPENAI_*, SUPABASE_URL, SUPABASE_KEY
 
-# Backend
-cd syndicate-api && uv sync && uv run uvicorn syndicate_api.main:app --reload --port 8000
-
-# Frontend (new terminal)
+# Frontend
 cd syndicate-ui && npm install && npm run dev
 
-# Agent swarm (new terminal)  
-cd syndicate-agent && uv sync && python -m syndicate_agent.main
+# Agent swarm (new terminal)
+python -m syndicate_agent.main
 ```
 
-## Testing
+## MCP Tools (Cursor IDE Integration)
 
-```bash
-pip install pytest pytest-asyncio httpx pyyaml
+The MCP server exposes 9 tools callable from Cursor. Configure in `.cursor/mcp.json`:
 
-# Full P1 verification (14 tests)
-python -m pytest tests/test_e2e_p1.py -v
+```json
+{
+  "mcpServers": {
+    "syndicate": {
+      "command": "python",
+      "args": ["syndicate-mcp/server.py"]
+    }
+  }
+}
 ```
 
-Verifies: Band agents (6/6), Supabase tables (4), Gemini API, Azure OpenAI, project structure integrity.
+| Tool | Description |
+|------|-------------|
+| `syn_init` | Initialize Syndicate for a project (returns agent count + skill count) |
+| `syn_task` | Send a task to the swarm (creates in Supabase, bridge picks it up) |
+| `syn_status` | Check agents, recent tasks, pending approvals |
+| `syn_review` | Request adversarial cross-model code review |
+| `syn_memory` | Query or store persistent project memory (with category filter) |
+| `syn_find_tool` | Search GitHub for cursor-skills repos |
+| `syn_install_skill` | Install a skill from GitHub into the project |
+| `syn_list_skills` | List all installed skills (77 detected) |
+| `syn_skill_info` | Read SKILL.md content of any installed skill |
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
-| **Agent Coordination** | [Band.ai](https://band.ai) — rooms, @mention routing, WebSocket, peer discovery |
-| **LLM (Primary)** | Google Gemini 2.5 Flash — coordinator + specialists |
-| **LLM (Adversarial)** | Azure OpenAI GPT-4o — cross-model code review |
-| **Frontend** | React 19 + Vite 8 + TypeScript 6 + Tailwind v4 + Zustand |
-| **Auth** | [Clerk](https://clerk.com) — GitHub + Google + Microsoft OAuth |
-| **Backend** | FastAPI + asyncpg + Pydantic v2 |
-| **Database** | [Supabase](https://supabase.com) (PostgreSQL) |
-| **MCP** | Python MCP server for Cursor/Claude integration |
-| **Deployment** | Vercel (frontend) + Railway (backend) + Supabase (DB) |
+| **Agent Coordination** | [Band.ai](https://band.ai) - rooms, @mention routing, WebSocket |
+| **LLM (Primary)** | Google Gemini 2.5 Flash - 5 agents |
+| **LLM (Adversarial)** | Azure OpenAI GPT-4o - cross-model review |
+| **Frontend** | React 19 + Vite 8 + TypeScript + Tailwind v4 + Zustand + Three.js |
+| **Auth** | [Clerk](https://clerk.com) - GitHub + Google + Microsoft OAuth |
+| **Database** | [Supabase](https://supabase.com) (PostgreSQL + pgvector + Realtime) |
+| **MCP** | Python MCP server (9 tools, JSON-RPC over stdio) |
+| **Deployment** | Vercel (frontend) + Supabase (DB) |
 
-## MCP Tools (Cursor Integration)
+## Database Schema
 
-Install: Add to `.cursor/mcp.json` and the tools appear in Cursor automatically.
+| Table | Purpose |
+|-------|---------|
+| `agents` | 6 agent records with status (idle/active) |
+| `tasks` | Task lifecycle (pending -> planning -> in_progress -> reviewing -> complete) |
+| `events` | Immutable event log (every agent action tracked) |
+| `memory` | Persistent learnings with pgvector embeddings |
+| `task_metrics` | Quantified performance (first_pass_rate, iterations, time, score) |
+| `approvals` | Human-in-the-loop decisions (pending/approved/rejected) |
 
-| Tool | What It Does |
-|------|-------------|
-| `syn_init` | Initialize Syndicate for a project |
-| `syn_task` | Send a development task to the swarm |
-| `syn_status` | Check agent status and active tasks |
-| `syn_review` | Request adversarial cross-model code review |
-| `syn_memory` | Query or store persistent project memory |
-| `syn_find_tool` | Search marketplaces for skills/MCPs |
-
-## Project Structure
-
-```
-Vibe-Syndicate/
-├── syndicate-agent/           # Agent brain
-│   ├── src/syndicate_agent/
-│   │   ├── main.py            # Swarm runner (all agents concurrently)
-│   │   ├── config.py          # Environment config
-│   │   ├── types.py           # Typed vocabulary (Task, Event, Subtask, etc.)
-│   │   └── prompts/           # Per-role prompt documents
-│   │       ├── nexus.md       # Conductor protocol
-│   │       ├── architect.md   # Planning rules
-│   │       ├── engineer.md    # Implementation rules
-│   │       └── reviewer.md    # Review protocol
-│   └── pyproject.toml
-├── syndicate-api/             # Backend API
-│   ├── src/syndicate_api/
-│   │   ├── main.py            # FastAPI app
-│   │   ├── api/               # Routes (health, tasks, agents, events, memory)
-│   │   └── middleware/        # Clerk JWT auth
-│   ├── migrations/            # Supabase SQL
-│   └── pyproject.toml
-├── syndicate-ui/              # Frontend dashboard
-│   ├── src/
-│   │   ├── pages/             # Dashboard, LiveRoom, Agents, Tasks, Memory
-│   │   ├── components/        # UI primitives + auth
-│   │   └── globals.css        # Design tokens (Linear-inspired dark mode)
-│   └── package.json
-├── tests/                     # E2E verification tests
-├── docs/                      # Architecture docs, hackathon resources
-├── AGENTS.md                  # Persistent project memory & decisions
-└── .env.example               # All environment variables documented
-```
+All tables have RLS policies (anon read/write) and Supabase Realtime enabled.
 
 ## Dashboard Pages
 
 | Route | Page | Description |
 |-------|------|-------------|
-| `/` | Landing | Cinematic 3D landing with OrbConstellation, GSAP scroll reveals, CTA |
-| `/app` | Dashboard | Task submission, agent stats, swarm status indicator |
-| `/pipeline` | Pipeline | Signal-flow visualization: Input → Plan → Code → Review → Output |
-| `/live` | Live Room | Real-time event stream (Supabase Realtime) |
-| `/agents` | Agents | Roster with status, models, roles, descriptions |
-| `/tasks` | Tasks | Kanban pipeline: pending → planning → in_progress → reviewing → complete |
-| `/metrics` | Metrics | KPIs, agent activity distribution, self-improvement indicator |
-| `/memory` | Memory | Store/query persistent learnings and conventions |
-| `/approvals` | Approvals | Human-in-the-loop decisions with approve/reject actions |
+| `/` | Landing | Product overview, agent roster, features |
+| `/app` | Dashboard | Task submission, agent stats, swarm status |
+| `/pipeline` | Pipeline | Signal-flow: Input -> Plan -> Code -> Review -> Output |
+| `/live` | Live Room | Real-time event stream |
+| `/agents` | Agents | Roster with status badges |
+| `/tasks` | Tasks | Kanban pipeline view |
+| `/metrics` | Metrics | KPIs, improvement trends, agent activity |
+| `/memory` | Memory | Store/query learnings with category filter |
+| `/approvals` | Approvals | HITL decisions with risk levels |
+
+## Project Structure
+
+```
+Vibe-Syndicate/
+├── syndicate-agent/              # Agent brain (Band SDK + LLM)
+│   ├── src/syndicate_agent/
+│   │   ├── main.py              # Swarm runner (reconnect-forever pattern)
+│   │   ├── bridge.py            # Band <-> Supabase event bridge
+│   │   ├── orchestrator.py      # Task lifecycle + approval gates
+│   │   ├── metrics.py           # Performance computation engine
+│   │   ├── memory.py            # 3-layer memory + pgvector semantic search
+│   │   ├── self_improve.py      # SkillOpt evolution loop
+│   │   └── prompts/             # Per-agent prompt documents
+│   └── migrations/              # SQL (task_metrics, pgvector, approvals)
+├── syndicate-ui/                 # React 19 dashboard
+│   ├── src/pages/               # 9 pages (Dashboard, Pipeline, Metrics, etc.)
+│   ├── src/components/          # UI components + 3D agent graph
+│   ├── src/stores/              # Zustand (Supabase Realtime -> state)
+│   └── src/lib/                 # API client, Supabase, sounds
+├── syndicate-mcp/               # MCP server (9 tools)
+│   └── server.py                # JSON-RPC over stdio
+├── tests/                       # 33 tests (unit + integration + E2E)
+├── docs/                        # Architecture, hackathon, demo script
+├── .cursor/skills/              # 15 novel workspace skills
+├── .cursor/rules/               # 10 workspace rules (always-active)
+├── AGENTS.md                    # Persistent project memory
+└── CHANGELOG.md                 # Version history
+```
+
+## Testing
+
+```bash
+# Unit tests (26 - bridge, metrics, MCP structure)
+python -m pytest tests/test_band.py tests/test_metrics.py tests/test_mcp.py -v
+
+# Supabase integration (6 - CRUD all tables)
+python -m pytest tests/test_supabase.py -v
+
+# Full E2E lifecycle (1 - submit -> events -> metrics -> memory)
+python -m pytest tests/test_e2e.py -v
+```
+
+## Self-Improvement System
+
+After every task completion, the system:
+1. **MetricsEngine** computes: first_pass_rate, iteration_count, time_to_complete, review_score
+2. **SelfImprovementEngine** detects recurring patterns from agent learnings
+3. **Skill Evolution** appends learned patterns to agent prompt documents
+4. **Memory** stores the learning with pgvector embedding for future semantic retrieval
+
+```mermaid
+flowchart LR
+    Complete["Task Complete"] --> Metrics["Compute Metrics"]
+    Metrics --> Analyze["Analyze Patterns"]
+    Analyze --> Evolve["Evolve Prompts"]
+    Evolve --> Store["Store to Memory"]
+    Store --> Better["Next Task Better"]
+```
 
 ## Hackathon
 
-**Band of Agents Hackathon** — [lablab.ai](https://lablab.ai/ai-hackathons/band-of-agents-hackathon)
+**Band of Agents Hackathon** - June 12-19, 2026 - [lablab.ai](https://lablab.ai/ai-hackathons/band-of-agents-hackathon)
 
 - **Track**: Multi-Agent Software Development
-- **Core requirement**: 3+ agents collaborating through Band (we have 6)
-- **Band usage**: CORE coordination layer — all agent-to-agent communication flows through Band rooms
-- **Differentiator**: Self-improving agents + cross-model adversarial review + persistent compound memory
+- **Requirement**: 3+ agents through Band (we have 6)
+- **Differentiator**: Self-improving agents + cross-model review + compound memory + MCP IDE integration
 
-## Status
+## Live Demo
 
-- Phase 1-4: Complete ✓ (foundation, orchestration, intelligence, interface)
-- Phase 5: Complete ✓ (deployment, video script, submission draft)
-- Frontend: Immersive 3D + glassmorphic + sound design
-- **Next: Product Upgrade Plan (Phases A-I)** — see `.cursor/plans/vibe_syndicate_product_0cb735d3.plan.md`
+**https://syndicate-ui-five.vercel.app**
 
 ## Author
 
-**Adit Jain** — [@aditjain2005](https://github.com/Adit-Jain-srm)
+**Adit Jain** - [GitHub](https://github.com/Adit-Jain-srm)
 
 ## License
 
