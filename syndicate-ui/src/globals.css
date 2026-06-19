@@ -2,44 +2,44 @@
 @import "tailwindcss";
 
 @theme {
-  --color-void: #000000;
-  --color-onyx: #000000;
-  --color-abyss: #000000;
-  --color-deep: #080808;
-  --color-charcoal: #111111;
-  --color-surface: #111111;
-  --color-surface-input: #0a0a0a;
-  --color-elevated: #1a1a1a;
-  --color-border: #222222;
-  --color-graphite: #222222;
-  --color-iron: #333333;
-  --color-muted: #4a4a4a;
-  --color-slate: #666666;
-  --color-subtle: #666666;
-  --color-mist: #cccccc;
-  --color-fog: #999999;
-  --color-dim: #999999;
-  --color-soft: #cccccc;
-  --color-snow: #ffffff;
-  --color-bright: #ffffff;
+  --color-void: #0a0a0c;
+  --color-onyx: #0a0a0c;
+  --color-abyss: #0a0a0a;
+  --color-deep: #0f1012;
+  --color-charcoal: #161719;
+  --color-surface: #161719;
+  --color-surface-input: #161719;
+  --color-elevated: #1e2024;
+  --color-border: #2a2d32;
+  --color-graphite: #2a2d32;
+  --color-iron: #3a3f47;
+  --color-muted: #4a4f58;
+  --color-slate: #6b7280;
+  --color-subtle: #6b7280;
+  --color-mist: #d0d6e0;
+  --color-fog: #9ca3af;
+  --color-dim: #9ca3af;
+  --color-soft: #d1d5db;
+  --color-snow: #f3f4f6;
+  --color-bright: #f3f4f6;
   --color-white: #ffffff;
-  --color-indigo: #963CBD;
-  --color-accent: #963CBD;
-  --color-indigo-glow: #b44ee6;
-  --color-accent-glow: #b44ee6;
-  --color-cyan: #C5299B;
-  --color-emerald: #963CBD;
-  --color-amber: #FEAE51;
-  --color-yellow: #FEAE51;
-  --color-rose: #FF6F61;
-  --color-crimson: #FF6F61;
-  --color-acid-lime: #FEAE51;
-  --color-agent-nexus: #963CBD;
-  --color-agent-architect: #C5299B;
-  --color-agent-engineer: #FF6F61;
-  --color-agent-reviewer: #FEAE51;
-  --color-agent-researcher: #963CBD;
-  --color-agent-qa: #C5299B;
+  --color-indigo: #6366f1;
+  --color-accent: #6366f1;
+  --color-indigo-glow: #818cf8;
+  --color-accent-glow: #818cf8;
+  --color-cyan: #06b6d4;
+  --color-emerald: #34d399;
+  --color-amber: #fbbf24;
+  --color-yellow: #fbbf24;
+  --color-rose: #fb7185;
+  --color-crimson: #ef4444;
+  --color-acid-lime: #a3e635;
+  --color-agent-nexus: #6366f1;
+  --color-agent-architect: #06b6d4;
+  --color-agent-engineer: #34d399;
+  --color-agent-reviewer: #fb7185;
+  --color-agent-researcher: #fbbf24;
+  --color-agent-qa: #8b5cf6;
   --font-display: 'Inter', system-ui, -apple-system, sans-serif;
   --font-body: 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
@@ -49,16 +49,17 @@
 html { scroll-behavior: smooth; }
 body {
   margin: 0;
-  background: #000000;
-  color: #ffffff;
+  background: #0a0a0c;
+  color: #f3f4f6;
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
 
-/* Scrollbar - hidden for void aesthetic */
-::-webkit-scrollbar { display: none; }
-* { scrollbar-width: none; }
+/* Scrollbar - subtle dark */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-graphite); border-radius: 3px; }
 
 /* Glass */
 .glass {

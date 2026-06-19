@@ -1,172 +1,120 @@
-import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
-import { gsap } from 'gsap';
+
+const AGENTS = [
+  { role: 'Nexus', desc: 'Conductor - routes tasks, tracks progress', color: '#963CBD' },
+  { role: 'Architect', desc: 'Planner - decomposes into subtasks', color: '#C5299B' },
+  { role: 'Engineer', desc: 'Coder - implements from assignments', color: '#FF6F61' },
+  { role: 'Reviewer', desc: 'Quality gate - adversarial cross-model review', color: '#FEAE51' },
+  { role: 'Researcher', desc: 'Discovery - web research, tool finding', color: '#963CBD' },
+  { role: 'QA', desc: 'Validation - testing and verification', color: '#C5299B' },
+];
 
 export default function Landing() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [count, setCount] = useState(0);
-  const countRef = useRef({ value: 0 });
-
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-
-    const minLoadTime = 2500;
-    const startTime = Date.now();
-
-    gsap.to(countRef.current, {
-      value: 100,
-      duration: 2.5,
-      ease: 'power2.out',
-      onUpdate: () => setCount(Math.floor(countRef.current.value)),
-      onComplete: () => {
-        const elapsed = Date.now() - startTime;
-        const remaining = Math.max(0, minLoadTime - elapsed);
-        setTimeout(() => {
-          setLoading(false);
-          document.body.style.overflow = '';
-        }, remaining + 400);
-      },
-    });
-
-    return () => { document.body.style.overflow = ''; };
-  }, []);
 
   return (
-    <>
-      {/* Loading screen - scroll locked, matches Dala exactly */}
-      <AnimatePresence>
-        {loading && (
-          <motion.div
-            initial={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.8 }}
-            className="fixed inset-0 flex flex-col items-center justify-center"
-            style={{ zIndex: 100, background: '#000' }}
+    <div className="min-h-[100dvh]">
+      {/* Hero */}
+      <section className="min-h-[100dvh] flex flex-col justify-center px-6 md:px-20 max-w-5xl">
+        <motion.h1
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="text-4xl md:text-6xl font-light text-white tracking-tight leading-tight"
+        >
+          Multi-agent developer orchestration
+        </motion.h1>
+        <motion.p
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.15 }}
+          className="text-white/50 text-base md:text-lg mt-4 max-w-xl leading-relaxed"
+        >
+          Six AI agents collaborate through Band rooms to plan, code, review, and deploy. Memory compounds across sessions. The 100th task is 10x better than the first.
+        </motion.p>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="mt-8 flex gap-3"
+        >
+          <button
+            onClick={() => navigate('/app')}
+            className="px-6 py-2.5 bg-white text-black text-sm font-medium rounded-lg hover:bg-white/90 transition-colors cursor-pointer"
           >
-            {/* Tagline */}
-            <p className="text-white/50 text-sm md:text-base tracking-wide text-center mb-16">
-              Your swarm has the answer.
-              <br />
-              Ask Syndicate to build it.
-            </p>
+            Open Dashboard
+          </button>
+          <a
+            href="https://github.com/Adit-Jain-srm/Vibe-Syndicate"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-6 py-2.5 border border-white/20 text-white/70 text-sm rounded-lg hover:border-white/40 hover:text-white transition-colors"
+          >
+            GitHub
+          </a>
+        </motion.div>
+      </section>
 
-            {/* Loading indicator bottom-left */}
-            <div className="fixed bottom-8 left-8">
-              <p className="text-[11px] uppercase tracking-[0.25em] text-white/40 mb-1">Loading</p>
-              <div className="flex gap-1 mb-3">
-                <span className="w-[3px] h-[3px] bg-white/40 animate-pulse" />
-                <span className="w-[3px] h-[3px] bg-white/40 animate-pulse" style={{ animationDelay: '0.15s' }} />
-                <span className="w-[3px] h-[3px] bg-white/40 animate-pulse" style={{ animationDelay: '0.3s' }} />
+      {/* Agents */}
+      <section className="px-6 md:px-20 py-20 max-w-5xl">
+        <h2 className="text-xl font-medium text-white mb-8">The Swarm</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {AGENTS.map((agent, i) => (
+            <motion.div
+              key={agent.role}
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.05 }}
+              className="p-4 rounded-lg border border-white/8 bg-white/[0.02] hover:bg-white/[0.04] transition-colors"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <span className="w-2 h-2 rounded-full" style={{ background: agent.color }} />
+                <span className="text-sm font-medium text-white">{agent.role}</span>
               </div>
-              <p className="text-[10px] uppercase tracking-[0.2em] text-white/30 mb-1">Completed</p>
-              <p className="text-4xl font-light text-white tabular-nums tracking-tight">{count}</p>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Main scrollable content - ALL backgrounds transparent */}
-      {!loading && (
-        <div>
-          {/* Hero */}
-          <section className="min-h-[100dvh] flex flex-col items-start justify-end px-8 md:px-20 pb-20">
-            <motion.h1
-              initial={{ y: 30, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: 1.2, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              className="text-5xl md:text-7xl font-extralight text-white tracking-[-0.04em] leading-[0.95]"
-            >
-              Syndicate
-            </motion.h1>
-            <motion.p
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: 0.8, delay: 0.6 }}
-              className="text-white/35 text-sm mt-4 tracking-wide"
-            >
-              Compound intelligence that grows with you.
-            </motion.p>
-          </section>
-
-          {/* Section 2 - left aligned */}
-          <section className="min-h-[100dvh] flex items-center px-8 md:px-20">
-            <motion.div
-              initial={{ y: 40, opacity: 0 }}
-              whileInView={{ y: 0, opacity: 1 }}
-              viewport={{ once: true, amount: 0.4 }}
-              transition={{ duration: 0.8 }}
-              className="max-w-lg"
-            >
-              <h2 className="text-2xl md:text-4xl font-light text-white tracking-[-0.04em] leading-tight">
-                Unlock collective intelligence.
-              </h2>
-              <p className="text-white/35 text-sm mt-5 leading-relaxed max-w-[50ch]">
-                Stop managing fragmented tools. Start building with a team of AI agents that collaborate, learn, and improve with every task.
-              </p>
+              <p className="text-xs text-white/40 leading-relaxed">{agent.desc}</p>
             </motion.div>
-          </section>
-
-          {/* Section 3 - right aligned */}
-          <section className="min-h-[100dvh] flex items-center justify-end px-8 md:px-20">
-            <motion.div
-              initial={{ y: 40, opacity: 0 }}
-              whileInView={{ y: 0, opacity: 1 }}
-              viewport={{ once: true, amount: 0.4 }}
-              transition={{ duration: 0.8 }}
-              className="max-w-lg text-right"
-            >
-              <h2 className="text-2xl md:text-4xl font-light text-white tracking-[-0.04em] leading-tight">
-                Six agents. One mind.
-              </h2>
-              <p className="text-white/35 text-sm mt-5 leading-relaxed max-w-[50ch] ml-auto">
-                Nexus conducts. Architect plans. Engineer builds. Reviewer challenges. Researcher discovers. QA validates.
-              </p>
-            </motion.div>
-          </section>
-
-          {/* Section 4 - left aligned */}
-          <section className="min-h-[100dvh] flex items-center px-8 md:px-20">
-            <motion.div
-              initial={{ y: 40, opacity: 0 }}
-              whileInView={{ y: 0, opacity: 1 }}
-              viewport={{ once: true, amount: 0.4 }}
-              transition={{ duration: 0.8 }}
-              className="max-w-lg"
-            >
-              <h2 className="text-2xl md:text-4xl font-light text-white tracking-[-0.04em] leading-tight">
-                Memory that compounds.
-              </h2>
-              <p className="text-white/35 text-sm mt-5 leading-relaxed max-w-[50ch]">
-                Every task teaches the system. Conventions persist. Patterns emerge. The 100th task executes 10x better than the first.
-              </p>
-            </motion.div>
-          </section>
-
-          {/* Section 5 - CTA centered */}
-          <section className="min-h-[100dvh] flex flex-col items-center justify-center px-6">
-            <motion.div
-              initial={{ y: 30, opacity: 0 }}
-              whileInView={{ y: 0, opacity: 1 }}
-              viewport={{ once: true, amount: 0.4 }}
-              transition={{ duration: 0.8 }}
-              className="text-center"
-            >
-              <h2 className="text-3xl md:text-5xl font-light text-white tracking-[-0.04em]">
-                Enter the swarm.
-              </h2>
-              <button
-                onClick={() => navigate('/app')}
-                className="mt-10 px-8 py-3 text-sm text-white/70 border border-white/10 rounded-full hover:text-white hover:border-white/25 hover:bg-white/[0.03] transition-all duration-300 cursor-pointer"
-                style={{ transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)' }}
-              >
-                Request Access
-              </button>
-            </motion.div>
-          </section>
+          ))}
         </div>
-      )}
-    </>
+      </section>
+
+      {/* Features */}
+      <section className="px-6 md:px-20 py-20 max-w-5xl">
+        <h2 className="text-xl font-medium text-white mb-8">How it works</h2>
+        <div className="space-y-6">
+          {[
+            { step: 'Submit', desc: 'Send a task from the dashboard or via MCP from your IDE' },
+            { step: 'Orchestrate', desc: 'Nexus routes to Architect, who plans. Engineer codes. Reviewer checks with a different model.' },
+            { step: 'Learn', desc: 'After completion, metrics are computed, skills evolve, memory persists for next time.' },
+          ].map((item, i) => (
+            <motion.div
+              key={item.step}
+              initial={{ opacity: 0, x: -12 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.08 }}
+              className="flex gap-4"
+            >
+              <span className="text-white/20 text-sm font-mono mt-0.5">{i + 1}</span>
+              <div>
+                <h3 className="text-sm font-medium text-white">{item.step}</h3>
+                <p className="text-xs text-white/40 mt-1 leading-relaxed max-w-lg">{item.desc}</p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="px-6 md:px-20 py-20 max-w-5xl">
+        <button
+          onClick={() => navigate('/app')}
+          className="px-6 py-2.5 bg-white text-black text-sm font-medium rounded-lg hover:bg-white/90 transition-colors cursor-pointer"
+        >
+          Enter Dashboard
+        </button>
+      </section>
+    </div>
   );
 }
