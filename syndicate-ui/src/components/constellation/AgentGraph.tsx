@@ -1,5 +1,5 @@
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Sphere } from '@react-three/drei';
+import { OrbitControls, Sphere, Line, Points, PointMaterial } from '@react-three/drei';
 import { Suspense, useRef, useMemo } from 'react';
 import * as THREE from 'three';
 import { useConstellationStore } from '../../stores/constellation';
@@ -45,12 +45,10 @@ function AgentNode({ node, isActive }: { node: typeof NODES[0]; isActive: boolea
 
   return (
     <group position={node.position}>
-      {/* Outer glow sphere */}
-      <Sphere ref={glowRef} args={[node.size * 2, 16, 16]}>
+      <Sphere ref={glowRef} args={[node.size * 2, 12, 12]}>
         <meshBasicMaterial color={color} transparent opacity={0.04} depthWrite={false} />
       </Sphere>
-      {/* Core sphere */}
-      <Sphere ref={meshRef} args={[node.size, 24, 24]}>
+      <Sphere ref={meshRef} args={[node.size, 20, 20]}>
         <meshStandardMaterial
           color={color}
           emissive={color}
@@ -65,25 +63,29 @@ function AgentNode({ node, isActive }: { node: typeof NODES[0]; isActive: boolea
   );
 }
 
-function ConnectionLine({ from, to, color }: { from: [number, number, number]; to: [number, number, number]; color: string }) {
-  const ref = useRef<THREE.Line>(null);
+function AmbientDust() {
+  const ref = useRef<THREE.Points>(null);
+  const count = 50;
+
+  const positions = useMemo(() => {
+    const pos = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      pos[i * 3] = (Math.random() - 0.5) * 8;
+      pos[i * 3 + 1] = (Math.random() - 0.5) * 6;
+      pos[i * 3 + 2] = (Math.random() - 0.5) * 6;
+    }
+    return pos;
+  }, []);
 
   useFrame(({ clock }) => {
     if (!ref.current) return;
-    const mat = ref.current.material as THREE.LineBasicMaterial;
-    mat.opacity = 0.08 + Math.sin(clock.getElapsedTime() * 0.5) * 0.04;
+    ref.current.rotation.y = clock.getElapsedTime() * 0.05;
   });
 
-  const geometry = useMemo(() => {
-    const g = new THREE.BufferGeometry();
-    g.setFromPoints([new THREE.Vector3(...from), new THREE.Vector3(...to)]);
-    return g;
-  }, [from, to]);
-
   return (
-    <line ref={ref as React.RefObject<THREE.Line>} geometry={geometry}>
-      <lineBasicMaterial color={color} transparent opacity={0.1} />
-    </line>
+    <Points ref={ref} positions={positions} stride={3}>
+      <PointMaterial size={0.02} color="#10b981" transparent opacity={0.25} sizeAttenuation />
+    </Points>
   );
 }
 
@@ -102,15 +104,16 @@ function NetworkGraph() {
       <pointLight position={[5, 5, 5]} intensity={0.5} color="#10b981" />
       <pointLight position={[-5, -3, 3]} intensity={0.3} color="#6366f1" />
 
-      {/* Ambient dust particles */}
       <AmbientDust />
 
       {EDGES.map(([from, to], i) => (
-        <ConnectionLine
+        <Line
           key={i}
-          from={NODES[from].position}
-          to={NODES[to].position}
+          points={[NODES[from].position, NODES[to].position]}
           color={NODES[from].color}
+          lineWidth={0.5}
+          transparent
+          opacity={0.12}
         />
       ))}
 
@@ -122,37 +125,6 @@ function NetworkGraph() {
         />
       ))}
     </group>
-  );
-}
-
-function AmbientDust() {
-  const count = 60;
-  const ref = useRef<THREE.Points>(null);
-
-  const positions = useMemo(() => {
-    const pos = new Float32Array(count * 3);
-    for (let i = 0; i < count; i++) {
-      pos[i * 3] = (Math.random() - 0.5) * 8;
-      pos[i * 3 + 1] = (Math.random() - 0.5) * 6;
-      pos[i * 3 + 2] = (Math.random() - 0.5) * 6;
-    }
-    return pos;
-  }, []);
-
-  useFrame(({ clock }) => {
-    if (!ref.current) return;
-    const t = clock.getElapsedTime() * 0.1;
-    ref.current.rotation.y = t;
-    ref.current.rotation.x = Math.sin(t * 0.5) * 0.1;
-  });
-
-  return (
-    <points ref={ref}>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
-      </bufferGeometry>
-      <pointsMaterial size={0.015} color="#10b981" transparent opacity={0.3} sizeAttenuation />
-    </points>
   );
 }
 

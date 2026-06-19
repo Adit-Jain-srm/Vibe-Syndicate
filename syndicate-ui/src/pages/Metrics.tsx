@@ -109,7 +109,7 @@ export default function Metrics() {
                       <k.icon size={11} style={{ color: k.c }} />
                       <p className="text-[9px] uppercase tracking-wider text-slate">{k.l}</p>
                     </div>
-                    <CountUp end={k.v} suffix={k.s} className="text-2xl font-light" style={{ color: k.c }} duration={1200} />
+                    <CountUp end={k.v} suffix={k.s || ''} className="text-2xl font-light" style={{ color: k.c }} duration={1200} />
                   </GlassPanel>
                 </motion.div>
               ))}
