@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Radio, Wifi, WifiOff } from 'lucide-react';
-import { api, normalizeEvent } from '../lib/api';
+import { api } from '../lib/api';
 import type { TaskEvent } from '../lib/api';
 import { supabase } from '../lib/supabase';
 import { playSound } from '../lib/sounds';
@@ -11,6 +11,19 @@ import PageTransition from '../components/ui/PageTransition';
 import GlassPanel from '../components/ui/GlassPanel';
 import PulsingDot, { AGENT_COLORS_HEX } from '../components/ui/PulsingDot';
 import TypingIndicator from '../components/ui/TypingIndicator';
+
+function safeEvent(row: Record<string, unknown>): TaskEvent {
+  return {
+    id: row.id as string | undefined,
+    task_id: row.task_id as string | undefined,
+    type: String(row.type ?? 'unknown'),
+    agent: String(row.agent ?? 'system'),
+    content: formatContent(row.content),
+    timestamp: String(row.timestamp ?? row.created_at ?? new Date().toISOString()),
+    created_at: row.created_at as string | undefined,
+    metadata: (row.metadata as Record<string, unknown>) ?? {},
+  };
+}
 
 export default function LiveRoom() {
   const [events, setEvents] = useState<TaskEvent[]>([]);
@@ -24,7 +37,7 @@ export default function LiveRoom() {
   useEffect(() => {
     if (showAll) {
       api.getRecentEvents().then((evts) => {
-        setEvents(evts.reverse());
+        setEvents([...evts].reverse());
       }).catch(() => {});
     }
   }, [showAll]);
@@ -43,7 +56,7 @@ export default function LiveRoom() {
         table: 'events',
         ...filter,
       }, (payload) => {
-        const newEvent = normalizeEvent(payload.new as Record<string, unknown>);
+        const newEvent = safeEvent(payload.new as Record<string, unknown>);
         setEvents(prev => [...prev, newEvent]);
         playSound('ping');
       })
@@ -192,18 +205,9 @@ export default function LiveRoom() {
                 </div>
               )}
 
-              <AnimatePresence mode="popLayout">
-                {events.map((evt) => (
-                  <motion.div
+              {events.map((evt) => (
+                  <div
                     key={evt.id ?? `${evt.task_id}-${evt.created_at}-${evt.type}`}
-                    initial={{ opacity: 0, x: -16 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 8 }}
-                    transition={{
-                      type: 'spring',
-                      stiffness: 400,
-                      damping: 30,
-                    }}
                     className="flex gap-3 p-3 rounded-lg hover:bg-obsidian/50 transition-colors"
                   >
                     <PulsingDot
@@ -226,9 +230,9 @@ export default function LiveRoom() {
                         <span className="text-[10px] text-slate font-mono">
                           {evt.type}
                         </span>
-                        {evt.metadata?.model && (
+                        {evt.metadata?.model != null && evt.metadata.model !== '' && (
                           <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-accent/10 text-accent">
-                            {String(evt.metadata.model)}
+                            {formatContent(evt.metadata.model)}
                           </span>
                         )}
                       </div>
@@ -236,9 +240,8 @@ export default function LiveRoom() {
                         {formatContent(evt.content)}
                       </p>
                     </div>
-                  </motion.div>
+                  </div>
                 ))}
-              </AnimatePresence>
 
               {/* Typing indicators for active agents */}
               <AnimatePresence>

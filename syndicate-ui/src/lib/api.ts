@@ -295,5 +295,3 @@ export const api = {
 
   subscribeToTask: subscribeToTaskEvents,
 };
-
-export { formatContent } from './formatContent';
