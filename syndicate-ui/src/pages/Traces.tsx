@@ -117,17 +117,45 @@ function TraceSpan({
           className="ml-[42px] mb-2"
         >
           <div className="rounded-lg bg-obsidian border border-graphite/50 p-4">
+            {event.metadata?.reasoning && (
+              <div className="mb-3 p-2.5 rounded-md bg-accent/5 border border-accent/10">
+                <p className="text-[9px] text-accent uppercase tracking-wide mb-1 font-medium">Reasoning</p>
+                <p className="text-xs text-fog/80 leading-relaxed">{String(event.metadata.reasoning)}</p>
+              </div>
+            )}
             <pre className="text-xs text-fog font-mono whitespace-pre-wrap break-words leading-relaxed">
               {event.content}
             </pre>
             {event.metadata && Object.keys(event.metadata).length > 0 && (
               <div className="mt-3 pt-3 border-t border-graphite/50">
-                <p className="text-[10px] text-slate uppercase tracking-wide mb-1">
-                  Metadata
-                </p>
-                <pre className="text-[10px] text-slate font-mono">
-                  {JSON.stringify(event.metadata, null, 2)}
-                </pre>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {event.metadata.model && (
+                    <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-accent/10 text-accent">
+                      model: {String(event.metadata.model)}
+                    </span>
+                  )}
+                  {event.metadata.confidence != null && (
+                    <span className={`text-[9px] font-mono px-2 py-0.5 rounded-full ${
+                      Number(event.metadata.confidence) >= 0.8 ? 'bg-emerald/10 text-emerald' :
+                      Number(event.metadata.confidence) >= 0.5 ? 'bg-amber/10 text-amber' : 'bg-rose/10 text-rose'
+                    }`}>
+                      confidence: {Math.round(Number(event.metadata.confidence) * 100)}%
+                    </span>
+                  )}
+                  {event.metadata.source && (
+                    <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-graphite/30 text-slate">
+                      via {String(event.metadata.source)}
+                    </span>
+                  )}
+                </div>
+                {Object.keys(event.metadata).filter(k => !['model', 'confidence', 'reasoning', 'source'].includes(k)).length > 0 && (
+                  <pre className="text-[10px] text-slate font-mono mt-2">
+                    {JSON.stringify(
+                      Object.fromEntries(Object.entries(event.metadata).filter(([k]) => !['model', 'confidence', 'reasoning', 'source'].includes(k))),
+                      null, 2
+                    )}
+                  </pre>
+                )}
               </div>
             )}
           </div>
@@ -144,7 +172,7 @@ export default function Traces() {
 
   useEffect(() => {
     api.getRecentEvents()
-      .then((data) => setEvents(data.events || []))
+      .then((data) => setEvents(Array.isArray(data) ? data : []))
       .catch(() => setEvents([]))
       .finally(() => setLoading(false));
   }, []);

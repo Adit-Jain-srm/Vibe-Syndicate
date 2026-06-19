@@ -66,15 +66,22 @@ export default function Dashboard() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [taskInput, setTaskInput] = useState('');
+  const [complexity, setComplexity] = useState<'simple' | 'medium' | 'complex'>('medium');
   const [submitting, setSubmitting] = useState(false);
   const [lastTaskId, setLastTaskId] = useState<string | null>(null);
   const [isSimulated, setIsSimulated] = useState(false);
   const [swarmLive, setSwarmLive] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [deliveryStatus, setDeliveryStatus] = useState<'submitted' | 'picked_up' | 'failed' | null>(null);
+  const [pendingApprovals, setPendingApprovals] = useState(0);
 
   useEffect(() => {
     api.getAgents().then(setAgents).catch(() => {});
     api.getTasks().then(setTasks).catch(() => {});
     api.isSwarmOnline().then(setSwarmLive).catch(() => {});
+    supabase.from('approvals').select('id', { count: 'exact', head: true })
+      .eq('status', 'pending')
+      .then(({ count }) => setPendingApprovals(count || 0));
   }, []);
 
   useEffect(() => {
@@ -98,27 +105,67 @@ export default function Dashboard() {
     };
   }, []);
 
-  const handleSubmit = async () => {
-    if (!taskInput.trim() || submitting) return;
+  const handleSubmit = async (retryCount = 0) => {
+    const trimmed = taskInput.trim();
+    if (!trimmed || submitting) return;
+
+    if (trimmed.length < 5) {
+      setSubmitError('Task description must be at least 5 characters');
+      return;
+    }
+
     setSubmitting(true);
+    setSubmitError(null);
+    setDeliveryStatus(null);
 
     try {
-      const task = await api.createTask(taskInput);
+      const task = await api.createTask(trimmed, complexity);
       setLastTaskId(task.id);
-      const desc = taskInput;
+      const desc = trimmed;
       setTaskInput('');
       playSound('success');
+      setDeliveryStatus('submitted');
 
-      // Always run simulation for visual feedback
-      // If swarm is live, the bridge will ALSO pick up the task
-      setIsSimulated(!swarmLive);
-      simulateSwarmExecution(task.id, desc);
+      if (swarmLive) {
+        setIsSimulated(false);
+        // Watch for pickup confirmation
+        const pickupChannel = supabase
+          .channel(`pickup-${task.id}`)
+          .on('postgres_changes', {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'tasks',
+            filter: `id=eq.${task.id}`,
+          }, (payload) => {
+            const newStatus = (payload.new as Task).status;
+            if (newStatus !== 'pending') {
+              setDeliveryStatus('picked_up');
+              supabase.removeChannel(pickupChannel);
+            }
+          })
+          .subscribe();
+
+        // Timeout: if not picked up within 15s, show warning
+        setTimeout(() => {
+          setDeliveryStatus((prev) => prev === 'submitted' ? 'failed' : prev);
+          supabase.removeChannel(pickupChannel);
+        }, 15000);
+      } else {
+        setIsSimulated(true);
+        simulateSwarmExecution(task.id, desc);
+      }
 
       const updated = await api.getTasks();
       setTasks(updated);
     } catch (err) {
       playSound('error');
-      console.error('Task creation failed:', err);
+      const message = err instanceof Error ? err.message : 'Task creation failed';
+      setSubmitError(message);
+      setDeliveryStatus('failed');
+
+      if (retryCount < 2) {
+        setTimeout(() => handleSubmit(retryCount + 1), 2000 * (retryCount + 1));
+      }
     } finally {
       setSubmitting(false);
     }
@@ -141,6 +188,27 @@ export default function Dashboard() {
           Submit tasks, monitor agents, track progress
         </p>
       </motion.section>
+
+      {/* Pending Approvals Banner */}
+      {pendingApprovals > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="px-8 relative z-10 max-w-4xl mx-auto mb-4"
+        >
+          <a href="/approvals" className="block">
+            <div className="px-4 py-3 rounded-xl border border-[var(--color-amber)]/40 bg-[var(--color-amber)]/5 hover:bg-[var(--color-amber)]/10 transition-colors cursor-pointer">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[var(--color-amber)] animate-pulse" />
+                <span className="text-sm text-[var(--color-amber)]">
+                  {pendingApprovals} approval{pendingApprovals > 1 ? 's' : ''} waiting for your decision
+                </span>
+                <span className="text-[10px] text-[var(--color-amber)]/60 ml-auto">→ Review</span>
+              </div>
+            </div>
+          </a>
+        </motion.div>
+      )}
 
       {/* Swarm Status */}
       <div className="px-8 relative z-10 max-w-4xl mx-auto mb-6">
@@ -190,24 +258,48 @@ export default function Dashboard() {
           <h2 className="text-xl mb-6 text-[var(--color-snow)]">
             What shall we build?
           </h2>
+          <div className="flex gap-2 mb-4">
+            {(['simple', 'medium', 'complex'] as const).map(level => (
+              <button
+                key={level}
+                onClick={() => setComplexity(level)}
+                className={`px-3 py-1.5 text-[11px] rounded-full border transition-all ${
+                  complexity === level
+                    ? 'border-[var(--color-accent)]/60 bg-[var(--color-accent)]/10 text-[var(--color-snow)]'
+                    : 'border-[var(--color-iron)] text-[var(--color-slate)] hover:text-[var(--color-fog)]'
+                }`}
+              >
+                {level} {level === 'simple' ? '(3 agents)' : level === 'medium' ? '(5 agents)' : '(7 agents)'}
+              </button>
+            ))}
+          </div>
           <div className="flex gap-4">
             <input
               value={taskInput}
-              onChange={e => setTaskInput(e.target.value)}
+              onChange={e => { setTaskInput(e.target.value); setSubmitError(null); }}
               onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-              placeholder="Describe your task..."
+              placeholder="Describe your task (min 5 chars)..."
               className="flex-1 bg-[var(--color-charcoal)] border border-[var(--color-iron)] rounded-xl px-5 py-4 text-[var(--color-snow)] placeholder-[var(--color-slate)] focus:outline-none focus:border-[var(--color-accent)] transition-all duration-300"
             />
             <motion.button
               whileHover={{ scale: submitting ? 1 : 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={handleSubmit}
-              disabled={submitting}
-              className={`px-8 py-4 bg-[var(--color-accent)] text-white rounded-xl font-medium transition-all duration-200 ${submitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[var(--color-accent-glow)]'}`}
+              onClick={() => handleSubmit()}
+              disabled={submitting || taskInput.trim().length < 5}
+              className={`px-8 py-4 bg-[var(--color-accent)] text-white rounded-xl font-medium transition-all duration-200 ${submitting || taskInput.trim().length < 5 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[var(--color-accent-glow)]'}`}
             >
               {submitting ? 'Sending...' : 'Send to Swarm'}
             </motion.button>
           </div>
+          {submitError && (
+            <motion.p
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-2 text-xs text-[var(--color-rose)]"
+            >
+              {submitError}
+            </motion.p>
+          )}
           {lastTaskId && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -215,12 +307,23 @@ export default function Dashboard() {
               className="mt-4"
             >
               <div className="flex items-center gap-2 mb-3">
-                <span className="w-2 h-2 rounded-full bg-[var(--color-emerald)] animate-pulse" />
-                <span className="text-sm text-[var(--color-emerald)]">
-                  Task submitted — {isSimulated ? 'simulating agent workflow' : 'swarm processing live'}
+                <span className={`w-2 h-2 rounded-full ${
+                  deliveryStatus === 'picked_up' ? 'bg-[var(--color-emerald)]' :
+                  deliveryStatus === 'failed' ? 'bg-[var(--color-rose)]' :
+                  'bg-[var(--color-emerald)] animate-pulse'
+                }`} />
+                <span className={`text-sm ${
+                  deliveryStatus === 'picked_up' ? 'text-[var(--color-emerald)]' :
+                  deliveryStatus === 'failed' ? 'text-[var(--color-rose)]' :
+                  'text-[var(--color-emerald)]'
+                }`}>
+                  {deliveryStatus === 'picked_up' && 'Task picked up by Nexus — processing'}
+                  {deliveryStatus === 'submitted' && (isSimulated ? 'Simulating agent workflow...' : 'Waiting for swarm pickup...')}
+                  {deliveryStatus === 'failed' && !isSimulated && 'Swarm did not pick up task — it may be offline'}
+                  {!deliveryStatus && 'Task submitted'}
                 </span>
                 {isSimulated && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--color-accent)]/10 text-[var(--color-accent)]">simulated</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--color-amber)]/10 text-[var(--color-amber)] border border-[var(--color-amber)]/20">demo mode</span>
                 )}
               </div>
               <p className="text-[10px] text-[var(--color-slate)] font-mono mb-2">ID: {lastTaskId}</p>
@@ -234,7 +337,7 @@ export default function Dashboard() {
                   const done = stageIdx <= currentIdx;
                   return (
                     <div key={stage} className="flex items-center gap-1">
-                      <div className={`w-2 h-2 rounded-full ${done ? 'bg-[var(--color-emerald)]' : 'bg-[var(--color-iron)]'}`} />
+                      <div className={`w-2 h-2 rounded-full transition-all duration-500 ${done ? 'bg-[var(--color-emerald)]' : 'bg-[var(--color-iron)]'}`} />
                       <span className={`text-[9px] ${done ? 'text-[var(--color-fog)]' : 'text-[var(--color-muted)]'}`}>{stage.replace('_', ' ')}</span>
                       {stage !== 'complete' && <span className="text-[var(--color-iron)] text-[8px] mx-1">→</span>}
                     </div>

@@ -211,6 +211,9 @@ async def run_swarm():
     # Start task watcher (polls Supabase for dashboard-submitted tasks)
     tasks.append(asyncio.create_task(bridge.watch_for_tasks()))
 
+    # Start heartbeat system (detects stale/crashed agents)
+    tasks.append(asyncio.create_task(bridge.run_heartbeat(list(config.keys()), interval=30)))
+
     if "nexus" in config:
         tasks.append(asyncio.create_task(run_nexus(config)))
         await asyncio.sleep(1)

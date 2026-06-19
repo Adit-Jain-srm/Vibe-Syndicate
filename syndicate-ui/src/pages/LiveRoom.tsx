@@ -228,6 +228,11 @@ export default function LiveRoom() {
                         <span className="text-[10px] text-slate font-mono">
                           {evt.type}
                         </span>
+                        {evt.metadata?.model && (
+                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-accent/10 text-accent">
+                            {String(evt.metadata.model)}
+                          </span>
+                        )}
                       </div>
                       <p className="text-sm text-mist leading-relaxed break-words">
                         {evt.content}
