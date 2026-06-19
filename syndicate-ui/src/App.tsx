@@ -1,10 +1,12 @@
 import { BrowserRouter, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'motion/react';
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, lazy, Suspense } from 'react';
 import AppRouter from './AppRouter';
 import NavigationRail from './components/constellation/NavigationRail';
 import { playSound } from './lib/sounds';
 import { useConstellationStore } from './stores/constellation';
+
+const AgentGraph = lazy(() => import('./components/constellation/AgentGraph'));
 
 function AppShell() {
   const { pathname } = useLocation();
@@ -30,6 +32,11 @@ function AppShell() {
 
   return (
     <div className="min-h-[100dvh] bg-void text-snow">
+      {/* Subtle 3D agent network graph background */}
+      <Suspense fallback={null}>
+        <AgentGraph />
+      </Suspense>
+
       {!isLanding && <NavigationRail />}
 
       <main className={!isLanding ? 'md:ml-14' : ''}>
