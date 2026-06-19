@@ -518,7 +518,7 @@ class EventBridge:
         if agent_role == "reviewer":
             if any(kw in content_lower for kw in ["review passed", "passed", "approved", "lgtm", "clean", "no issues"]):
                 return EventType.REVIEW_PASSED
-            if any(kw in content_lower for kw in ["review failed", "failed", "reject", "must fix", "critical", "vulnerability"]):
+            if any(kw in content_lower for kw in ["review failed", "failed", "reject", "must fix", "critical", "vulnerability", "issue", "bug", "problem"]):
                 return EventType.REVIEW_FAILED
             return EventType.REVIEW_STARTED
 

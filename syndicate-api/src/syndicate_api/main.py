@@ -31,7 +31,7 @@ __version__ = "0.2.0"
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
-    """Startup/shutdown lifecycle — mirrors Manthan's pool-managed lifespan."""
+    """Startup/shutdown lifecycle — managed async pool init/teardown."""
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s %(message)s",

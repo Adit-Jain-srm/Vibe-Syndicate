@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { api } from '../lib/api';
 import type { TaskEvent } from '../lib/api';
+import { formatContent } from '../lib/formatContent';
 import PageTransition from '../components/ui/PageTransition';
 import GlassPanel from '../components/ui/GlassPanel';
 import AnimatedCard from '../components/ui/AnimatedCard';

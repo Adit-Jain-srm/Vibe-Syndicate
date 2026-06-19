@@ -25,7 +25,7 @@ class TestOrchestrator:
 
         orch = SyndicateOrchestrator(Config.load())
         task = asyncio.run(orch.create_task("Test"))
-        assert task.id.startswith("task_")
+        assert task.id  # UUID format
         assert task.status.value == "pending"
 
 

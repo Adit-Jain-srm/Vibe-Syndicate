@@ -4,7 +4,7 @@ The timeline is the canonical view of "what the agent is doing right now."
 The orchestrator writes events to Supabase; this endpoint replays the
 history then streams new ones via Server-Sent Events.
 
-Adapted from Manthan's production SSE pattern (replay + live tail).
+Adapted from production SSE pattern (replay + live tail).
 """
 from __future__ import annotations
 
@@ -62,7 +62,7 @@ async def get_task_events(task_id: str):
 async def stream_task_events(request: Request, task_id: str):
     """SSE stream of task events in real-time.
 
-    Follows Manthan's pattern: replay existing events first, then
+    Follows standard pattern: replay existing events first, then
     poll for new ones with heartbeat pings. Client receives:
       - event: task_event — a real event from the swarm
       - event: ping — keepalive (every 10s)

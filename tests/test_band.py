@@ -101,6 +101,6 @@ class TestBridgeInit:
         assert "Bearer" in bridge._headers["Authorization"]
 
     def test_initial_state(self, bridge):
-        assert bridge._current_task_id is None
+        assert bridge._active_task_ids == {}
         assert bridge._metrics_engine is None
         assert bridge._self_improve is None

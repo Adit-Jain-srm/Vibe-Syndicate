@@ -1,11 +1,12 @@
 import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Radio, Wifi, WifiOff } from 'lucide-react';
-import { api } from '../lib/api';
-import { supabase } from '../lib/supabase';
+import { api, normalizeEvent } from '../lib/api';
 import type { TaskEvent } from '../lib/api';
+import { supabase } from '../lib/supabase';
 import { playSound } from '../lib/sounds';
 import { useConstellationStore } from '../stores/constellation';
+import { formatContent } from '../lib/formatContent';
 import PageTransition from '../components/ui/PageTransition';
 import GlassPanel from '../components/ui/GlassPanel';
 import PulsingDot, { AGENT_COLORS_HEX } from '../components/ui/PulsingDot';
@@ -42,7 +43,7 @@ export default function LiveRoom() {
         table: 'events',
         ...filter,
       }, (payload) => {
-        const newEvent = payload.new as TaskEvent;
+        const newEvent = normalizeEvent(payload.new as Record<string, unknown>);
         setEvents(prev => [...prev, newEvent]);
         playSound('ping');
       })
@@ -192,12 +193,12 @@ export default function LiveRoom() {
               )}
 
               <AnimatePresence mode="popLayout">
-                {events.map((evt, i) => (
+                {events.map((evt) => (
                   <motion.div
-                    key={i}
-                    initial={{ opacity: 0, x: -16, height: 0 }}
-                    animate={{ opacity: 1, x: 0, height: 'auto' }}
-                    exit={{ opacity: 0 }}
+                    key={evt.id ?? `${evt.task_id}-${evt.created_at}-${evt.type}`}
+                    initial={{ opacity: 0, x: -16 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 8 }}
                     transition={{
                       type: 'spring',
                       stiffness: 400,
@@ -231,8 +232,8 @@ export default function LiveRoom() {
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-mist leading-relaxed break-words">
-                        {evt.content}
+                      <p className="text-sm text-mist leading-relaxed break-words whitespace-pre-wrap">
+                        {formatContent(evt.content)}
                       </p>
                     </div>
                   </motion.div>

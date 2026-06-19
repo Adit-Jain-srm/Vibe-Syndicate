@@ -3,6 +3,20 @@
  */
 
 import { supabase } from './supabase';
+import { formatContent } from './formatContent';
+
+export function normalizeEvent(row: Record<string, unknown>): TaskEvent {
+  return {
+    id: row.id as string | undefined,
+    task_id: row.task_id as string | undefined,
+    type: String(row.type ?? 'unknown'),
+    agent: String(row.agent ?? 'system'),
+    content: formatContent(row.content),
+    timestamp: String(row.timestamp ?? row.created_at ?? new Date().toISOString()),
+    created_at: row.created_at as string | undefined,
+    metadata: (row.metadata as Record<string, unknown>) ?? {},
+  };
+}
 
 // ── Types ───────────────────────────────────────────────────────
 
@@ -173,14 +187,14 @@ export const api = {
     const { data, error } = await supabase
       .from('events').select('*').eq('task_id', taskId).order('created_at', { ascending: true });
     if (error) throw error;
-    return data || [];
+    return (data || []).map((row) => normalizeEvent(row as Record<string, unknown>));
   },
 
   getRecentEvents: async (): Promise<TaskEvent[]> => {
     const { data, error } = await supabase
       .from('events').select('*').order('created_at', { ascending: false }).limit(20);
     if (error) throw error;
-    return data || [];
+    return (data || []).map((row) => normalizeEvent(row as Record<string, unknown>));
   },
 
   // Memory
@@ -281,3 +295,5 @@ export const api = {
 
   subscribeToTask: subscribeToTaskEvents,
 };
+
+export { formatContent } from './formatContent';

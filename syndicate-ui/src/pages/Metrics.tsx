@@ -102,17 +102,19 @@ export default function Metrics() {
                 { l: 'Avg Iterations', v: avgIter, icon: BarChart3, c: 'var(--color-cyan)' },
                 { l: 'Avg Time', v: avgTime, s: 's', icon: Clock, c: 'var(--color-amber)' },
                 { l: 'Tokens Used', v: totalTokens > 1000 ? Math.round(totalTokens / 1000) : totalTokens, s: totalTokens > 1000 ? 'k' : '', icon: Users, c: 'var(--color-rose)' },
-              ].map((k, i) => (
+              ].map((k, i) => {
+                const Icon = k.icon;
+                return (
                 <motion.div key={k.l} initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.15 + i * 0.06 }}>
                   <GlassPanel className="p-5 h-full">
                     <div className="flex items-center gap-1.5 mb-2">
-                      <k.icon size={11} style={{ color: k.c }} />
+                      <Icon size={11} style={{ color: k.c }} />
                       <p className="text-[9px] uppercase tracking-wider text-slate">{k.l}</p>
                     </div>
                     <CountUp end={k.v} suffix={k.s || ''} className="text-2xl font-light" style={{ color: k.c }} duration={1200} />
                   </GlassPanel>
                 </motion.div>
-              ))}
+              );})}
             </div>
 
             {/* Improvement Trend (Rolling Pass Rate) */}

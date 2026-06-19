@@ -74,7 +74,7 @@ export default function NavigationRail() {
                     {pendingApprovals > 9 ? '9+' : pendingApprovals}
                   </span>
                 )}
-                <span className="absolute left-12 px-2 py-1 rounded-md text-[10px] text-white bg-[#1a1a1a] border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                <span className="absolute left-12 px-2 py-1 rounded-md text-[10px] nav-tooltip opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
                   {item.label}
                 </span>
               </Link>
@@ -109,7 +109,7 @@ export default function NavigationRail() {
                     transform: isActive ? 'scale(1.2)' : 'scale(1)',
                   }}
                 />
-                <span className="absolute left-11 px-2 py-1 rounded-md text-[10px] text-white bg-[#1a1a1a] border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                <span className="absolute left-11 px-2 py-1 rounded-md text-[10px] nav-tooltip opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
                   {item.label}
                 </span>
               </Link>
@@ -123,14 +123,16 @@ export default function NavigationRail() {
           animate={{ scale: 1 }}
           transition={{ delay: 0.9 }}
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          className="mt-2 w-7 h-7 flex items-center justify-center rounded-full text-[#4a4f58] hover:text-white transition-colors duration-300"
+          aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+          className="mt-2 w-7 h-7 flex items-center justify-center rounded-full text-slate hover:text-snow transition-colors duration-300"
         >
           {theme === 'dark' ? <Sun size={12} /> : <Moon size={12} />}
         </motion.button>
       </nav>
 
       {/* Mobile: bottom horizontal with labels */}
-      <nav className="fixed bottom-3 left-1/2 -translate-x-1/2 z-40 flex md:hidden items-center gap-1 px-3 py-2 rounded-2xl bg-[rgba(8,9,12,0.85)] backdrop-blur-xl border border-white/5">
+      <nav className="nav-rail-mobile fixed bottom-3 left-1/2 -translate-x-1/2 z-40 flex md:hidden items-center gap-1 px-3 py-2 rounded-2xl bg-[rgba(8,9,12,0.85)] backdrop-blur-xl border border-white/5">
         {PRIMARY_NAV.slice(0, 5).map(item => {
           const isActive = pathname === item.path;
           const showBadge = item.path === '/approvals' && pendingApprovals > 0;
@@ -157,6 +159,14 @@ export default function NavigationRail() {
             </Link>
           );
         })}
+        <button
+          type="button"
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          className="flex flex-col items-center justify-center w-10 h-10 rounded-xl text-slate hover:text-snow transition-colors"
+        >
+          {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+        </button>
       </nav>
     </>
   );

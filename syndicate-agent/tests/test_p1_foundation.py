@@ -12,8 +12,8 @@ class TestConfig:
         cfg = Config.load()
         assert cfg.band_ws_url == "wss://app.band.ai/api/v1/socket/websocket"
         assert cfg.band_rest_url == "https://app.band.ai/"
-        assert cfg.gemini_model_coordinator == "gemini-2.5-flash-preview-05-20"
-        assert cfg.claude_model == "claude-sonnet-4-20250514"
+        assert cfg.gemini_model_coordinator == "gemini-2.5-flash"
+        assert cfg.gemini_model_specialist == "gemini-2.5-flash"
 
     def test_config_all_fields_present(self):
         from syndicate_agent.config import Config
@@ -67,7 +67,7 @@ class TestTypes:
     def test_all_event_types(self):
         from syndicate_agent.types import EventType
         types = list(EventType)
-        assert len(types) == 13
+        assert len(types) == 17
         assert EventType.TASK_COMPLETE in types
         assert EventType.SKILL_EVOLVED in types
 
