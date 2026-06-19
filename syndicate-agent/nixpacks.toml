@@ -1,0 +1,12 @@
+# Railway/Nixpacks — syndicate-agent root directory
+[variables]
+PYTHONUNBUFFERED = "1"
+
+[phases.install]
+cmds = [
+  "pip install -r requirements.txt",
+  "pip install --no-cache-dir -e .",
+]
+
+[start]
+cmd = "python -m syndicate_agent.main"

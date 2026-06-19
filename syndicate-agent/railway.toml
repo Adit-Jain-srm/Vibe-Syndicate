@@ -1,17 +1,12 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "pip install -r requirements.txt"
-watchPatterns = ["src/**", "requirements.txt"]
+buildCommand = "pip install -r requirements.txt && pip install --no-cache-dir -e ."
+watchPatterns = ["src/**", "requirements.txt", "pyproject.toml"]
 
 [deploy]
-startCommand = "python -m syndicate_agent.main"
+startCommand = "PYTHONPATH=src python -m syndicate_agent.main"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
 healthcheckPath = "/"
 numReplicas = 1
 sleepApplication = false
-
-[deploy.env]
-PYTHON_VERSION = "3.12"
-PYTHONPATH = "/app/src"
-PYTHONUNBUFFERED = "1"
