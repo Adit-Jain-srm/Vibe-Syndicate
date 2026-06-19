@@ -64,8 +64,8 @@ export default function Agents() {
           </p>
         </motion.div>
 
-        {/* ── Agent Grid ──────────────────────────── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* ── Agent Grid — Featured Nexus + Grid ──── */}
+        <div className="space-y-4">
           {loading
             ? Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="rounded-xl border border-graphite bg-charcoal p-6">
@@ -83,62 +83,82 @@ export default function Agents() {
                   </GlassPanel>
                 </div>
               )
-            : agents.map((agent, i) => {
-                const color = AGENT_COLORS_HEX[agent.role] || '#8a8f98';
-                const desc =
-                  ROLE_DESCRIPTIONS[agent.role] || 'Specialist agent';
-                const isActive = agent.status === 'active';
-
+            : (() => {
+                const nexus = agents.find(a => a.role === 'nexus');
+                const others = agents.filter(a => a.role !== 'nexus');
                 return (
-                  <AnimatedCard
-                    key={agent.name}
-                    glass
-                    delay={0.06 * i}
-                    className="p-6"
-                  >
-                    {/* Top row: dot + name + status */}
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <PulsingDot
-                          color={color}
-                          size="lg"
-                          active={isActive}
-                        />
-                        <div>
-                          <h3 className="text-sm font-medium text-snow">
-                            {agent.name}
-                          </h3>
-                          <p className="text-[10px] text-slate capitalize">
-                            {agent.role}
-                          </p>
-                        </div>
-                      </div>
-                      <StatusBadge status={agent.status} />
-                    </div>
+                  <>
+                    {/* Nexus — Featured Card */}
+                    {nexus && (() => {
+                      const color = AGENT_COLORS_HEX[nexus.role] || '#8a8f98';
+                      const isActive = nexus.status === 'active';
+                      return (
+                        <AnimatedCard glass delay={0} className="p-8">
+                          <div className="flex items-start gap-6">
+                            <PulsingDot color={color} size="lg" active={isActive} className="mt-1" />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between mb-2">
+                                <div>
+                                  <h3 className="text-base font-medium text-snow">{nexus.name}</h3>
+                                  <p className="text-xs text-[var(--color-accent)] mt-0.5">Conductor</p>
+                                </div>
+                                <StatusBadge status={nexus.status} />
+                              </div>
+                              <p className="text-sm text-fog leading-relaxed mb-3">
+                                {ROLE_DESCRIPTIONS[nexus.role]}. Orchestrates the full lifecycle — every task flows through Nexus.
+                              </p>
+                              <div className="flex items-center gap-6">
+                                <div className="flex items-center gap-1.5">
+                                  <Cpu size={11} className="text-slate" />
+                                  <span className="text-[10px] text-slate font-mono">{nexus.model || 'gemini-2.5-flash'}</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <Activity size={11} className="text-slate" />
+                                  <span className="text-[10px] text-slate">{isActive ? 'Processing' : 'Idle'}</span>
+                                </div>
+                                <a href={`/traces?agent=${nexus.role}`} className="text-[10px] text-[var(--color-accent)]/70 hover:text-[var(--color-accent)] ml-auto transition-colors">
+                                  View traces →
+                                </a>
+                              </div>
+                            </div>
+                          </div>
+                        </AnimatedCard>
+                      );
+                    })()}
 
-                    {/* Description */}
-                    <p className="text-xs text-fog leading-relaxed mb-4">
-                      {desc}
-                    </p>
+                    {/* Other Agents — 2x3 Grid (smaller cards) */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {others.map((agent, i) => {
+                        const color = AGENT_COLORS_HEX[agent.role] || '#8a8f98';
+                        const desc = ROLE_DESCRIPTIONS[agent.role] || 'Specialist agent';
+                        const isActive = agent.status === 'active';
 
-                    {/* Meta row */}
-                    <div className="flex items-center gap-4 pt-3 border-t border-graphite/50">
-                      <div className="flex items-center gap-1.5">
-                        <Cpu size={11} className="text-slate" />
-                        <span className="text-[10px] text-slate font-mono">
-                          {agent.model || 'gemini-2.5-flash'}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <Activity size={11} className="text-slate" />
-                        <span className="text-[10px] text-slate">
-                          {isActive ? 'Processing' : 'Idle'}
-                        </span>
-                      </div>
+                        return (
+                          <AnimatedCard key={agent.name} delay={0.04 * i} className="p-5">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2.5">
+                                <PulsingDot color={color} size="md" active={isActive} />
+                                <div>
+                                  <h3 className="text-sm font-medium text-snow">{agent.name}</h3>
+                                  <p className="text-[9px] text-slate capitalize">{agent.role}</p>
+                                </div>
+                              </div>
+                              <StatusBadge status={agent.status} />
+                            </div>
+                            <p className="text-xs text-fog leading-relaxed mb-3">{desc}</p>
+                            <div className="flex items-center justify-between pt-2 border-t border-graphite/50">
+                              <span className="text-[9px] text-slate font-mono">{agent.model || 'gemini-2.5-flash'}</span>
+                              <a href={`/traces?agent=${agent.role}`} className="text-[9px] text-[var(--color-accent)]/70 hover:text-[var(--color-accent)] transition-colors">
+                                traces →
+                              </a>
+                            </div>
+                          </AnimatedCard>
+                        );
+                      })}
                     </div>
-                  </AnimatedCard>
+                  </>
                 );
-              })}
+              })()}
         </div>
 
         {/* ── Architecture note ───────────────────── */}

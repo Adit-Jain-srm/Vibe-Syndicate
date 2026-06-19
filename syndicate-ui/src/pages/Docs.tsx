@@ -11,6 +11,11 @@ const MCP_TOOLS = [
   { name: 'syn_install_skill', desc: 'Install a skill from GitHub', example: 'syn_install_skill({repo: "owner/skill-name"})' },
   { name: 'syn_list_skills', desc: 'List all installed skills', example: 'syn_list_skills({})' },
   { name: 'syn_skill_info', desc: 'Read a skill\'s SKILL.md', example: 'syn_skill_info({skill_name: "autonomous-bug-fixing"})' },
+  { name: 'syn_approve', desc: 'Approve/reject a pending decision', example: 'syn_approve({approval_id: "uuid", decision: "approved"})' },
+  { name: 'syn_events', desc: 'Get events for a task', example: 'syn_events({task_id: "uuid", limit: 20})' },
+  { name: 'syn_cancel', desc: 'Cancel a running task', example: 'syn_cancel({task_id: "uuid", reason: "No longer needed"})' },
+  { name: 'syn_watch', desc: 'Get live task state + new events', example: 'syn_watch({task_id: "uuid"})' },
+  { name: 'syn_explain', desc: 'Ask agent to explain its reasoning', example: 'syn_explain({task_id: "uuid", question: "why did reviewer flag this?"})' },
 ];
 
 const SETUP_STEPS = [
@@ -67,7 +72,7 @@ export default function Docs() {
 
         {/* MCP Tools */}
         <section className="mb-12">
-          <h2 className="text-base font-medium text-snow mb-4">MCP Tools (9)</h2>
+          <h2 className="text-base font-medium text-snow mb-4">MCP Tools (14)</h2>
           <p className="text-xs text-slate mb-4">These tools are available in Cursor IDE automatically via .cursor/mcp.json</p>
           <div className="space-y-3">
             {MCP_TOOLS.map((tool, i) => (
@@ -93,7 +98,7 @@ export default function Docs() {
         {/* Skills */}
         <section className="mb-12">
           <h2 className="text-base font-medium text-snow mb-4">Skills Integration</h2>
-          <p className="text-xs text-slate mb-4">77 skills installed across .cursor/skills/ and .agents/skills/</p>
+          <p className="text-xs text-slate mb-4">Skills installed across .cursor/skills/ and .agents/skills/ — auto-discovered by the swarm</p>
           <div className="space-y-3">
             {SKILL_COMMANDS.map((cmd, i) => (
               <motion.div

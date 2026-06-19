@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Brain, Plus, Clock, Tag } from 'lucide-react';
 import { api } from '../lib/api';
+import { supabase } from '../lib/supabase';
 import type { Memory } from '../lib/api';
 import { playSound } from '../lib/sounds';
 import PageTransition from '../components/ui/PageTransition';
@@ -33,6 +34,15 @@ export default function MemoryPage() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
+
+    const channel = supabase
+      .channel('memory-realtime')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'memory' }, () => {
+        api.getMemories().then(setMemories).catch(() => {});
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   const handleStore = async () => {

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
 import {
-  Sliders, Shield, Cpu, DollarSign, ToggleLeft, ToggleRight,
-  AlertTriangle, Bot, Zap,
+  Shield, Cpu, ToggleLeft, ToggleRight,
+  AlertTriangle, Zap,
 } from 'lucide-react';
 import PageTransition from '../components/ui/PageTransition';
 import GlassPanel from '../components/ui/GlassPanel';
@@ -97,14 +97,28 @@ function SliderControl({
   );
 }
 
+function usePersistedState<T>(key: string, defaultValue: T): [T, (v: T) => void] {
+  const [value, setValue] = useState<T>(() => {
+    try {
+      const stored = localStorage.getItem(`syndicate.controls.${key}`);
+      return stored ? JSON.parse(stored) : defaultValue;
+    } catch { return defaultValue; }
+  });
+  const setPersisted = (v: T) => {
+    setValue(v);
+    localStorage.setItem(`syndicate.controls.${key}`, JSON.stringify(v));
+  };
+  return [value, setPersisted];
+}
+
 export default function Controls() {
-  const [crossModel, setCrossModel] = useState(true);
-  const [autoApprove, setAutoApprove] = useState(false);
-  const [humanApproval, setHumanApproval] = useState(true);
-  const [skillEvolution, setSkillEvolution] = useState(true);
-  const [maxRounds, setMaxRounds] = useState(5);
-  const [tokenBudget, setTokenBudget] = useState(50000);
-  const [specialistTimeout, setSpecialistTimeout] = useState(180);
+  const [crossModel, setCrossModel] = usePersistedState('crossModel', true);
+  const [autoApprove, setAutoApprove] = usePersistedState('autoApprove', false);
+  const [humanApproval, setHumanApproval] = usePersistedState('humanApproval', true);
+  const [skillEvolution, setSkillEvolution] = usePersistedState('skillEvolution', true);
+  const [maxRounds, setMaxRounds] = usePersistedState('maxRounds', 5);
+  const [tokenBudget, setTokenBudget] = usePersistedState('tokenBudget', 50000);
+  const [specialistTimeout, setSpecialistTimeout] = usePersistedState('specialistTimeout', 180);
 
   return (
     <PageTransition>

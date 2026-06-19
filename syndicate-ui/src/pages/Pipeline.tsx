@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronDown, Clock, Zap } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api';
 import { supabase } from '../lib/supabase';
 import type { Task, TaskEvent } from '../lib/api';
@@ -24,9 +25,21 @@ export default function Pipeline() {
   const [events, setEvents] = useState<TaskEvent[]>([]);
   const [expandedStage, setExpandedStage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    api.getTasks().then(t => { setTasks(t); setLoading(false); }).catch(() => setLoading(false));
+    api.getTasks().then(t => {
+      setTasks(t);
+      setLoading(false);
+      const taskFromUrl = searchParams.get('task');
+      if (taskFromUrl && t.some(task => task.id === taskFromUrl)) {
+        setSelectedTask(taskFromUrl);
+      } else if (t.length > 0 && !selectedTask) {
+        const active = t.find(task => !['complete', 'failed'].includes(task.status));
+        if (active) setSelectedTask(active.id);
+        else setSelectedTask(t[0].id);
+      }
+    }).catch(() => setLoading(false));
     const ch = supabase.channel('pipeline-tasks')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
         api.getTasks().then(setTasks);
@@ -63,7 +76,7 @@ export default function Pipeline() {
 
   return (
     <PageTransition>
-      <div className="min-h-screen p-8 max-w-[1200px]">
+      <div className="min-h-screen p-6 md:p-8 max-w-[1400px]">
         <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
           <div className="flex items-center gap-3">
             <Zap size={20} className="text-accent" />
@@ -199,33 +212,80 @@ export default function Pipeline() {
               </AnimatePresence>
             </GlassPanel>
 
-            {/* Event log */}
-            <GlassPanel className="p-6">
-              <h2 className="text-sm font-medium text-fog uppercase tracking-wide mb-4">Event Timeline</h2>
-              <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                {events.length === 0 ? (
-                  <p className="text-xs text-slate text-center py-4">Waiting for events...</p>
-                ) : events.map((evt, i) => (
-                  <motion.div
-                    key={evt.id || i}
-                    initial={{ x: -10, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: i * 0.03 }}
-                    className="flex gap-3 items-start p-3 rounded-xl bg-charcoal/30 border border-graphite/30 hover:border-graphite/60 transition-colors"
-                  >
-                    <AgentAvatar role={evt.agent} size={22} />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-fog capitalize">{evt.agent}</span>
-                        <span className="text-[9px] text-slate font-mono">{evt.type.replace(/_/g, ' ')}</span>
-                        {(evt.timestamp || evt.created_at) && <span className="text-[9px] text-slate/60 font-mono ml-auto">{new Date(evt.timestamp || evt.created_at || '').toLocaleTimeString()}</span>}
-                      </div>
+            {/* Event log — split view */}
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_0.6fr] gap-4">
+              <GlassPanel className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-sm font-medium text-fog uppercase tracking-wide">Event Timeline</h2>
+                  {events.some(e => e.metadata?.source === 'simulation') && (
+                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber/10 text-amber border border-amber/20 font-mono">
+                      demo mode
+                    </span>
+                  )}
+                </div>
+                <div className="space-y-2 max-h-[400px] overflow-y-auto scrollbar-hide">
+                  {events.length === 0 ? (
+                    <p className="text-xs text-slate text-center py-4">Waiting for events...</p>
+                  ) : events.map((evt, i) => (
+                    <motion.div
+                      key={evt.id || i}
+                      initial={{ x: -10, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ delay: i * 0.03 }}
+                      className="flex gap-3 items-start p-3 rounded-xl bg-charcoal/30 border border-graphite/30 hover:border-graphite/60 transition-colors"
+                    >
+                      <AgentAvatar role={evt.agent} size={22} />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-fog capitalize">{evt.agent}</span>
+                          <span className="text-[9px] text-slate font-mono">{evt.type.replace(/_/g, ' ')}</span>
+                          {(evt.timestamp || evt.created_at) && <span className="text-[9px] text-slate/60 font-mono ml-auto">{new Date(evt.timestamp || evt.created_at || '').toLocaleTimeString()}</span>}
+                        </div>
                       <p className="text-xs text-slate mt-0.5 line-clamp-2">{evt.content}</p>
                     </div>
                   </motion.div>
                 ))}
               </div>
             </GlassPanel>
+
+              {/* Right sidebar — task summary */}
+              <GlassPanel className="p-5 h-fit lg:sticky lg:top-8">
+                <h3 className="text-xs font-medium text-fog uppercase tracking-wide mb-4">Task Info</h3>
+                {(() => {
+                  const task = tasks.find(t => t.id === selectedTask);
+                  if (!task) return null;
+                  return (
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-[9px] text-slate uppercase">Status</p>
+                        <p className="text-xs text-snow font-medium mt-0.5">{task.status.replace('_', ' ')}</p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] text-slate uppercase">Events</p>
+                        <p className="text-xs text-snow font-mono mt-0.5">{events.length}</p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] text-slate uppercase">Agents</p>
+                        <div className="flex gap-1 mt-1 flex-wrap">
+                          {[...new Set(events.map(e => e.agent).filter(a => a !== 'system'))].map(a => (
+                            <span key={a} className="text-[8px] px-1.5 py-0.5 rounded bg-graphite/50 text-fog capitalize">{a}</span>
+                          ))}
+                        </div>
+                      </div>
+                      {task.result && (
+                        <div>
+                          <p className="text-[9px] text-slate uppercase">Result</p>
+                          <p className="text-[10px] text-fog mt-0.5 leading-relaxed">{task.result.slice(0, 100)}</p>
+                        </div>
+                      )}
+                      <a href={`/tasks/${task.id}`} className="block text-[10px] text-[var(--color-accent)] hover:underline mt-2">
+                        Full detail →
+                      </a>
+                    </div>
+                  );
+                })()}
+              </GlassPanel>
+            </div>
           </motion.div>
         )}
 

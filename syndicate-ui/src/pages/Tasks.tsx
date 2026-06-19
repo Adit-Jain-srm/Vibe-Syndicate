@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ListTodo, ArrowRight } from 'lucide-react';
 import { api } from '../lib/api';
+import { supabase } from '../lib/supabase';
 import type { Task } from '../lib/api';
 import PageTransition from '../components/ui/PageTransition';
 import GlassPanel from '../components/ui/GlassPanel';
@@ -30,11 +31,14 @@ export default function Tasks() {
       })
       .catch(() => setLoading(false));
 
-    const interval = setInterval(
-      () => api.getTasks().then(setTasks).catch(() => {}),
-      5000,
-    );
-    return () => clearInterval(interval);
+    const channel = supabase
+      .channel('tasks-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
+        api.getTasks().then(setTasks).catch(() => {});
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   return (
@@ -135,7 +139,8 @@ export default function Tasks() {
                           <AnimatedCard
                             key={task.id}
                             delay={0.04 * i}
-                            className="p-3"
+                            className="p-3 cursor-pointer"
+                            onClick={() => window.location.href = `/tasks/${task.id}`}
                           >
                             {/* Accent bar */}
                             <div
@@ -146,7 +151,7 @@ export default function Tasks() {
                               {task.description}
                             </p>
                             <p className="text-[10px] text-slate font-mono mt-2 pl-2">
-                              {task.id}
+                              {task.id.slice(0, 8)}
                             </p>
                           </AnimatedCard>
                         ))}

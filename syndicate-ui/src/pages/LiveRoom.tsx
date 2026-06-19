@@ -5,9 +5,11 @@ import { api } from '../lib/api';
 import { supabase } from '../lib/supabase';
 import type { TaskEvent } from '../lib/api';
 import { playSound } from '../lib/sounds';
+import { useConstellationStore } from '../stores/constellation';
 import PageTransition from '../components/ui/PageTransition';
 import GlassPanel from '../components/ui/GlassPanel';
 import PulsingDot, { AGENT_COLORS_HEX } from '../components/ui/PulsingDot';
+import TypingIndicator from '../components/ui/TypingIndicator';
 
 export default function LiveRoom() {
   const [events, setEvents] = useState<TaskEvent[]>([]);
@@ -15,6 +17,7 @@ export default function LiveRoom() {
   const [connected, setConnected] = useState(false);
   const [showAll, setShowAll] = useState(true);
   const feedRef = useRef<HTMLDivElement>(null);
+  const activeAgents = useConstellationStore(s => s.agents.filter(a => a.status === 'active'));
 
   // Load recent events on mount (show all mode)
   useEffect(() => {
@@ -75,7 +78,7 @@ export default function LiveRoom() {
 
   return (
     <PageTransition>
-      <div className="min-h-screen p-8 max-w-[1200px]">
+      <div className="min-h-screen p-6 md:p-8 max-w-[1400px]">
         {/* ── Header ─────────────────────────────── */}
         <motion.div
           initial={{ opacity: 0, y: -12 }}
@@ -106,31 +109,19 @@ export default function LiveRoom() {
                 value={taskId}
                 onChange={(e) => setTaskId(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleConnect()}
-                placeholder="Enter task ID to filter… (leave empty for all)"
+                placeholder="Filter by task ID… (empty = all events)"
                 className="flex-1 bg-surface-input border border-graphite rounded-lg px-4 py-2.5 text-sm text-snow placeholder-slate focus:outline-none focus:border-accent/60 transition-all font-mono"
               />
-              <motion.button
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={handleConnect}
-                className={`px-5 py-2.5 rounded-lg text-sm font-medium flex items-center gap-2 transition-all ${
-                  connected
-                    ? 'bg-emerald/15 text-emerald border border-emerald/30'
-                    : 'bg-accent text-white hover:bg-accent/90'
-                }`}
-              >
-                {connected ? (
-                  <>
-                    <Wifi size={14} />
-                    Live
-                  </>
-                ) : (
-                  <>
-                    <WifiOff size={14} />
-                    Connect
-                  </>
-                )}
-              </motion.button>
+              {taskId.trim() && (
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={handleConnect}
+                  className="px-5 py-2.5 rounded-lg text-sm font-medium bg-accent text-white hover:bg-accent/90 transition-all"
+                >
+                  Filter
+                </motion.button>
+              )}
               {!showAll && (
                 <motion.button
                   whileHover={{ scale: 1.03 }}
@@ -141,6 +132,12 @@ export default function LiveRoom() {
                   Show All
                 </motion.button>
               )}
+              <div className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium ${
+                connected ? 'bg-emerald/10 text-emerald border border-emerald/20' : 'bg-graphite/30 text-slate'
+              }`}>
+                {connected ? <Wifi size={12} /> : <WifiOff size={12} />}
+                {connected ? 'Live' : 'Connecting…'}
+              </div>
             </div>
           </GlassPanel>
         </motion.div>
@@ -239,6 +236,13 @@ export default function LiveRoom() {
                       </p>
                     </div>
                   </motion.div>
+                ))}
+              </AnimatePresence>
+
+              {/* Typing indicators for active agents */}
+              <AnimatePresence>
+                {activeAgents.map(a => (
+                  <TypingIndicator key={a.role} agentName={a.role} color={AGENT_COLORS_HEX[a.role] || '#8a8f98'} />
                 ))}
               </AnimatePresence>
             </div>

@@ -57,21 +57,24 @@ Dashboard updates via Supabase Realtime
 
 ### syndicate-mcp/server.py
 
-MCP server exposing 11 tools via JSON-RPC over stdio. Callable from Cursor IDE.
+MCP server exposing 14 tools via JSON-RPC over stdio. Callable from Cursor IDE.
 
 | Tool | Supabase Table | Band API |
 |------|---------------|----------|
 | syn_init | - | - |
-| syn_task | tasks (INSERT) | - |
+| syn_task | tasks (INSERT) | Band (immediate routing) |
 | syn_status | agents, tasks, approvals (SELECT) | - |
-| syn_review | - | - |
+| syn_review | events (INSERT) | Azure OpenAI / Gemini |
 | syn_memory | memory (INSERT/SELECT) | - |
 | syn_find_tool | - | GitHub API |
 | syn_install_skill | - | npx subprocess |
 | syn_list_skills | - | filesystem |
 | syn_skill_info | - | filesystem |
-| syn_approve | approvals (UPDATE), tasks (UPDATE), events (INSERT) | - |
+| syn_approve | approvals (UPDATE), tasks (UPDATE), events (INSERT) | Band (RESUME signal) |
 | syn_events | events (SELECT) | - |
+| syn_cancel | tasks (UPDATE), events (INSERT) | - |
+| syn_watch | tasks (SELECT), events (SELECT), approvals (SELECT) | - |
+| syn_explain | events (SELECT) | Gemini (reasoning) |
 
 ### syndicate-ui/src/
 
@@ -112,7 +115,7 @@ All agents use Band SDK's `Agent.create()` with `LangGraphAdapter`. Communicatio
 ## Key Design Decisions
 
 1. **Bridge polls, not pushes**: Supabase doesn't support server-side triggers to external APIs. Bridge polls every 5s for pending tasks.
-2. **Simulation fallback**: Dashboard always runs `simulateSwarmExecution()` for visual demo. If swarm is live, bridge also routes the real task.
+2. **Simulation fallback**: When swarm is offline, Dashboard runs `simulateSwarmExecution()` for visual demo. Events are tagged with `metadata.source = "simulation"` to distinguish from real agent activity.
 3. **UUID everywhere**: tasks.id is PostgreSQL UUID type. Frontend uses `crypto.randomUUID()`, Python uses `str(uuid.uuid4())`.
 4. **Reconnect-forever**: All agents restart with exponential backoff (2s base, 60s max) on crash.
 5. **Event-driven state**: Task status derived from events (plan_created -> planning, code_generated -> in_progress, etc.).

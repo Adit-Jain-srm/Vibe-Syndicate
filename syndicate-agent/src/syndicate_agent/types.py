@@ -27,6 +27,7 @@ class AgentRole(str, Enum):
 
 class EventType(str, Enum):
     TASK_CREATED = "task_created"
+    TASK_CANCELLED = "task_cancelled"
     AGENT_JOINED = "agent_joined"
     PLAN_CREATED = "plan_created"
     PLAN_APPROVED = "plan_approved"

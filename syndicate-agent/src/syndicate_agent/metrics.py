@@ -46,6 +46,10 @@ class MetricsEngine:
             except (ValueError, TypeError):
                 pass
 
+        # Token estimation from content length (approximate: 1 token ≈ 4 chars)
+        total_content_chars = sum(len(e.get("content", "")) for e in events)
+        estimated_tokens = total_content_chars // 4
+
         # Review score
         review_score = 1.0 if first_pass else (0.5 if iteration_count <= 2 else 0.2)
 
@@ -54,7 +58,7 @@ class MetricsEngine:
             "first_pass_rate": first_pass,
             "iteration_count": max(iteration_count, 1),
             "time_to_complete_seconds": time_seconds,
-            "tokens_used": 0,
+            "tokens_used": estimated_tokens,
             "agents_involved": agents_involved,
             "review_score": review_score,
         }

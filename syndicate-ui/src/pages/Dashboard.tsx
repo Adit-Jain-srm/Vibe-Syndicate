@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { motion } from 'motion/react';
 import { api } from '../lib/api';
 import { supabase } from '../lib/supabase';
 import type { Agent, Task } from '../lib/api';
 import { playSound } from '../lib/sounds';
+import { toast } from '../components/ui/Toast';
+import Sparkline from '../components/ui/Sparkline';
 import PageTransition from '../components/ui/PageTransition';
 
 const AGENT_COLORS: Record<string, string> = {
@@ -23,7 +25,7 @@ async function simulateSwarmExecution(taskId: string, description: string) {
       type,
       agent,
       content,
-      metadata: {},
+      metadata: { source: 'simulation' },
     });
     await supabase
       .from('agents')
@@ -67,6 +69,7 @@ export default function Dashboard() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [taskInput, setTaskInput] = useState('');
   const [complexity, setComplexity] = useState<'simple' | 'medium' | 'complex'>('medium');
+  const [suggestedComplexity, setSuggestedComplexity] = useState<'simple' | 'medium' | 'complex' | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [lastTaskId, setLastTaskId] = useState<string | null>(null);
   const [isSimulated, setIsSimulated] = useState(false);
@@ -74,8 +77,21 @@ export default function Dashboard() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [deliveryStatus, setDeliveryStatus] = useState<'submitted' | 'picked_up' | 'failed' | null>(null);
   const [pendingApprovals, setPendingApprovals] = useState(0);
+  const lastSubmitRef = useRef(0);
+  const SUBMIT_COOLDOWN_MS = 3000;
 
   useEffect(() => {
+    if (taskInput.length < 15) { setSuggestedComplexity(null); return; }
+    const lower = taskInput.toLowerCase();
+    const complexKeys = ['refactor', 'migrate', 'redesign', 'system', 'architecture', 'rewrite', 'overhaul'];
+    const simpleKeys = ['fix', 'typo', 'rename', 'update', 'bump', 'change', 'remove'];
+    if (complexKeys.some(k => lower.includes(k))) setSuggestedComplexity('complex');
+    else if (simpleKeys.some(k => lower.includes(k))) setSuggestedComplexity('simple');
+    else setSuggestedComplexity('medium');
+  }, [taskInput]);
+
+  useEffect(() => {
+    import('../lib/demoSeed').then(({ seedDemoData }) => seedDemoData());
     api.getAgents().then(setAgents).catch(() => {});
     api.getTasks().then(setTasks).catch(() => {});
     api.isSwarmOnline().then(setSwarmLive).catch(() => {});
@@ -113,6 +129,13 @@ export default function Dashboard() {
       setSubmitError('Task description must be at least 5 characters');
       return;
     }
+
+    const now = Date.now();
+    if (now - lastSubmitRef.current < SUBMIT_COOLDOWN_MS) {
+      setSubmitError(`Please wait ${Math.ceil((SUBMIT_COOLDOWN_MS - (now - lastSubmitRef.current)) / 1000)}s before submitting again`);
+      return;
+    }
+    lastSubmitRef.current = now;
 
     setSubmitting(true);
     setSubmitError(null);
@@ -162,6 +185,7 @@ export default function Dashboard() {
       const message = err instanceof Error ? err.message : 'Task creation failed';
       setSubmitError(message);
       setDeliveryStatus('failed');
+      toast.error(message);
 
       if (retryCount < 2) {
         setTimeout(() => handleSubmit(retryCount + 1), 2000 * (retryCount + 1));
@@ -212,38 +236,65 @@ export default function Dashboard() {
 
       {/* Swarm Status */}
       <div className="px-8 relative z-10 max-w-4xl mx-auto mb-6">
-        <div className={`px-4 py-3 rounded-xl border ${agents.length > 0 ? 'border-[var(--color-emerald)]/30 bg-[var(--color-emerald)]/5' : 'border-[var(--color-rose)]/30 bg-[var(--color-rose)]/5'}`}>
+        <div className={`px-4 py-3 rounded-xl border ${swarmLive ? 'border-[var(--color-emerald)]/30 bg-[var(--color-emerald)]/5' : 'border-[var(--color-rose)]/30 bg-[var(--color-rose)]/5'}`}>
           <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${agents.length > 0 ? 'bg-[var(--color-emerald)] animate-pulse' : 'bg-[var(--color-rose)]'}`} />
+            <div className={`w-2 h-2 rounded-full ${swarmLive ? 'bg-[var(--color-emerald)] animate-pulse' : 'bg-[var(--color-rose)]'}`} />
             <span className="text-sm">
-              {agents.length > 0
-                ? `Swarm online — ${agents.length} agents connected`
-                : 'Swarm offline — run: python -m syndicate_agent.main'
+              {swarmLive
+                ? `Swarm online — agents responding`
+                : 'Swarm offline — tasks will run in demo mode'
               }
             </span>
+            {!swarmLive && (
+              <span className="text-[10px] text-[var(--color-slate)] ml-auto font-mono">run: python -m syndicate_agent.main</span>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Stats Grid */}
+      {/* Stats Bento */}
       <section className="px-8 relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
-          {[
-            { label: 'Agents', value: agents.length, color: '#6366f1' },
-            { label: 'Tasks', value: tasks.length, color: '#34d399' },
-            { label: 'Complete', value: tasks.filter(t => t.status === 'complete').length, color: '#fbbf24' },
-          ].map((stat, i) => (
-            <motion.div
-              key={stat.label}
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.1 + i * 0.08, duration: 0.5 }}
-              className="glass rounded-2xl p-6 glow-accent"
-            >
-              <p className="text-xs uppercase tracking-widest text-[var(--color-slate)] mb-2">{stat.label}</p>
-              <p className="text-4xl font-light" style={{ color: stat.color }}>{stat.value}</p>
-            </motion.div>
-          ))}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-4xl mx-auto">
+          {/* Hero stat - spans 2 cols */}
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.1, duration: 0.5 }}
+            className="col-span-2 glass rounded-2xl p-6 glow-accent relative overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-accent)]/5 to-transparent pointer-events-none" />
+            <div className="relative">
+              <p className="text-xs uppercase tracking-widest text-[var(--color-accent)] mb-1">Tasks Completed</p>
+              <div className="flex items-end gap-4">
+                <p className="text-5xl font-light text-[var(--color-snow)]">{tasks.filter(t => t.status === 'complete').length}</p>
+                <div className="flex-1 pb-2">
+                  <Sparkline data={tasks.filter(t => t.status === 'complete').map((_, i) => i + 1)} color="var(--color-accent)" height={28} width={120} />
+                </div>
+              </div>
+              <p className="text-[10px] text-[var(--color-slate)] mt-2">of {tasks.length} total tasks</p>
+            </div>
+          </motion.div>
+          {/* Secondary stats */}
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.18, duration: 0.5 }}
+            className="glass rounded-2xl p-5"
+          >
+            <p className="text-[10px] uppercase tracking-widest text-[var(--color-slate)] mb-2">Agents</p>
+            <p className="text-3xl font-light text-[var(--color-indigo)]">{agents.length}</p>
+            <p className="text-[9px] text-[var(--color-slate)] mt-1">{agents.filter(a => a.status === 'active').length} active</p>
+          </motion.div>
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.24, duration: 0.5 }}
+            className="glass rounded-2xl p-5"
+          >
+            <p className="text-[10px] uppercase tracking-widest text-[var(--color-slate)] mb-2">In Progress</p>
+            <p className="text-3xl font-light text-[var(--color-cyan)]">{tasks.filter(t => t.status === 'in_progress' || t.status === 'reviewing').length}</p>
+            <p className="text-[9px] text-[var(--color-slate)] mt-1">processing now</p>
+          </motion.div>
         </div>
       </section>
 
@@ -272,6 +323,14 @@ export default function Dashboard() {
                 {level} {level === 'simple' ? '(3 agents)' : level === 'medium' ? '(5 agents)' : '(7 agents)'}
               </button>
             ))}
+            {suggestedComplexity && suggestedComplexity !== complexity && (
+              <button
+                onClick={() => setComplexity(suggestedComplexity)}
+                className="px-2 py-1 text-[10px] rounded-full border border-[var(--color-accent)]/30 text-[var(--color-accent)] hover:bg-[var(--color-accent)]/5 transition-all"
+              >
+                suggested: {suggestedComplexity}
+              </button>
+            )}
           </div>
           <div className="flex gap-4">
             <input
@@ -327,7 +386,7 @@ export default function Dashboard() {
                 )}
               </div>
               <p className="text-[10px] text-[var(--color-slate)] font-mono mb-2">ID: {lastTaskId}</p>
-              <a href={`/pipeline`} className="text-[10px] text-[var(--color-accent)] hover:underline mb-3 inline-block">View full pipeline →</a>
+              <a href={`/pipeline?task=${lastTaskId}`} className="text-[10px] text-[var(--color-accent)] hover:underline mb-3 inline-block">View full pipeline →</a>
               {/* Progress stages */}
               <div className="flex gap-1 items-center">
                 {['pending', 'planning', 'in_progress', 'reviewing', 'complete'].map((stage) => {
@@ -349,42 +408,46 @@ export default function Dashboard() {
         </motion.div>
       </section>
 
-      {/* Agent Grid */}
+      {/* Agent Strip — horizontal inline, not 6 identical cards */}
       <section className="px-8 mt-12 max-w-6xl mx-auto">
         <motion.h2
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
-          className="text-xl mb-6 text-[var(--color-snow)]"
+          className="text-lg mb-5 text-[var(--color-snow)] font-light"
         >
           The Swarm
         </motion.h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {agents.length === 0 ? (
-            <div className="col-span-full text-center py-12 text-[var(--color-slate)] text-sm">
-              Swarm offline — no agents connected
-            </div>
-          ) : agents.map((agent, i) => (
-            <motion.div
-              key={agent.name}
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.5 + i * 0.06, type: 'spring' }}
-              className="glass rounded-2xl p-4 aspect-square flex flex-col items-center justify-center group hover:glow-accent transition-all duration-500"
-            >
-              <div
-                className={`w-12 h-12 mb-3 rounded-full transition-all duration-1000 ${agent.status === 'active' ? 'animate-pulse scale-110' : ''}`}
-                style={{
-                  background: `radial-gradient(circle at 30% 30%, ${AGENT_COLORS[agent.role] || '#6366f1'}88, ${AGENT_COLORS[agent.role] || '#6366f1'}22)`,
-                  boxShadow: `0 0 20px ${AGENT_COLORS[agent.role] || '#6366f1'}33, inset 0 0 15px ${AGENT_COLORS[agent.role] || '#6366f1'}22`,
-                }}
-              />
-              <p className="text-sm font-medium text-[var(--color-snow)]">{agent.name}</p>
-              <p className="text-[10px] text-[var(--color-slate)] mt-1 font-mono">{agent.role}</p>
-              <div className={`w-1.5 h-1.5 rounded-full mt-2 ${agent.status === 'active' ? 'bg-[var(--color-emerald)] animate-pulse' : 'bg-[var(--color-iron)]'}`} />
-            </motion.div>
-          ))}
-        </div>
+        {agents.length === 0 ? (
+          <div className="text-center py-12 text-[var(--color-slate)] text-sm border border-dashed border-[var(--color-graphite)] rounded-xl">
+            Swarm offline
+          </div>
+        ) : (
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            {agents.map((agent, i) => (
+              <motion.div
+                key={agent.name}
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.4 + i * 0.05, type: 'spring', stiffness: 300 }}
+                className="shrink-0 flex items-center gap-3 px-4 py-3 rounded-xl border border-[var(--color-graphite)]/50 bg-[var(--color-charcoal)]/60 hover:border-[var(--color-graphite)] transition-all group cursor-pointer"
+                onClick={() => window.location.href = `/traces?agent=${agent.role}`}
+              >
+                <div
+                  className={`w-8 h-8 rounded-full shrink-0 transition-all duration-700 ${agent.status === 'active' ? 'scale-110' : ''}`}
+                  style={{
+                    background: `radial-gradient(circle at 30% 30%, ${AGENT_COLORS[agent.role] || '#10b981'}88, ${AGENT_COLORS[agent.role] || '#10b981'}22)`,
+                    boxShadow: agent.status === 'active' ? `0 0 16px ${AGENT_COLORS[agent.role] || '#10b981'}40` : 'none',
+                  }}
+                />
+                <div>
+                  <p className="text-xs font-medium text-[var(--color-snow)] whitespace-nowrap">{agent.name}</p>
+                  <p className="text-[9px] text-[var(--color-slate)] font-mono">{agent.status === 'active' ? 'working' : 'idle'}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Recent Tasks */}
@@ -398,7 +461,8 @@ export default function Dashboard() {
                 initial={{ x: -20, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 transition={{ delay: i * 0.1 }}
-                className="glass rounded-xl p-4 group hover:border-[rgba(99,102,241,0.2)] transition-all"
+                className="glass rounded-xl p-4 group hover:border-[rgba(99,102,241,0.2)] transition-all cursor-pointer"
+                onClick={() => window.location.href = `/tasks/${task.id}`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex-1 min-w-0">

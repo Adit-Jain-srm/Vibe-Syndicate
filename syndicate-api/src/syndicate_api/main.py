@@ -1,12 +1,15 @@
-"""FastAPI gateway — `uvicorn syndicate_api.main:app`.
+"""FastAPI gateway — DEPRECATED.
 
-The developer-facing HTTP surface: tasks, events (SSE + polling),
-agent roster, memory, and Band room management. Auth is delegated
-to Clerk JWTs; this gateway validates them and extracts user context.
+NOTE: This API server was built for initial architecture but is NOT deployed.
+The frontend (syndicate-ui) communicates directly with Supabase via the JS client.
+The agent swarm communicates via syndicate-agent/bridge.py → Supabase REST.
+The MCP server (syndicate-mcp/server.py) provides IDE integration.
 
-Architecture note (from Manthan): the agents themselves are a separate
-package (syndicate_agent); this API persists events that the brain
-yields and streams them to the frontend.
+This module is kept for reference and potential future use as a unified API layer
+if the system moves beyond Supabase-direct architecture.
+
+To run (not needed for current demo):
+    uvicorn syndicate_api.main:app --port 8000
 """
 from __future__ import annotations
 

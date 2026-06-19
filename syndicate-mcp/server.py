@@ -226,7 +226,7 @@ async def handle_tool(name: str, args: dict) -> str:
                 # Immediate Band routing (M3) — don't rely on polling
                 band_room_id = os.getenv("BAND_ROOM_ID", "")
                 nexus_api_key = os.getenv("NEXUS_API_KEY", "")
-                band_rest_url = os.getenv("BAND_REST_URL", "https://app.band.bot/")
+                band_rest_url = os.getenv("BAND_REST_URL", "https://app.band.ai/")
                 if band_room_id and nexus_api_key:
                     try:
                         await c.post(
@@ -400,6 +400,23 @@ async def handle_tool(name: str, args: dict) -> str:
                             json={"task_id": task_id, "type": f"approval_{decision}", "agent": "user", "content": f"Approval {decision} via MCP", "metadata": {}},
                             timeout=10.0,
                         )
+
+                        # Send Band RESUME/REJECT signal if approved
+                        if decision == "approved":
+                            band_room_id = os.getenv("BAND_ROOM_ID", "")
+                            nexus_api_key = os.getenv("NEXUS_API_KEY", "")
+                            band_rest_url = os.getenv("BAND_REST_URL", "https://app.band.ai/")
+                            if band_room_id and nexus_api_key:
+                                try:
+                                    await c.post(
+                                        f"{band_rest_url}api/v1/agent/chats/{band_room_id}/messages",
+                                        headers={"x-api-key": nexus_api_key, "Content-Type": "application/json"},
+                                        json={"content": f"@Syndicate Nexus RESUME: Task {task_id} has been approved. Continue processing."},
+                                        timeout=15.0,
+                                    )
+                                except Exception:
+                                    pass
+
                         return json.dumps({"status": decision, "task_id": task_id, "task_status": new_status})
         return json.dumps({"error": "Failed to resolve approval"})
 

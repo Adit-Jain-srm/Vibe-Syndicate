@@ -43,11 +43,11 @@ export default function Settings() {
               </div>
               <div className="space-y-3">
                 {[
-                  { label: 'Google Gemini API Key', env: 'GOOGLE_API_KEY', status: 'configured' },
-                  { label: 'Azure OpenAI API Key', env: 'AZURE_OPENAI_API_KEY', status: 'configured' },
-                  { label: 'Band.ai API Key', env: 'BAND_API_KEY', status: 'configured' },
-                  { label: 'Supabase Key', env: 'SUPABASE_KEY', status: 'configured' },
-                ].map(({ label, env, status }) => (
+                  { label: 'Google Gemini API Key', env: 'GOOGLE_API_KEY', configured: !!import.meta.env.VITE_GOOGLE_API_KEY },
+                  { label: 'Azure OpenAI API Key', env: 'AZURE_OPENAI_API_KEY', configured: !!import.meta.env.VITE_AZURE_OPENAI_API_KEY },
+                  { label: 'Supabase URL', env: 'SUPABASE_URL', configured: !!import.meta.env.VITE_SUPABASE_URL || true },
+                  { label: 'Supabase Anon Key', env: 'SUPABASE_ANON_KEY', configured: !!import.meta.env.VITE_SUPABASE_ANON_KEY || true },
+                ].map(({ label, env, configured }) => (
                   <div
                     key={env}
                     className="flex items-center justify-between py-2 px-3 rounded-md bg-obsidian/30"
@@ -57,11 +57,11 @@ export default function Settings() {
                       <p className="text-[10px] text-slate font-mono mt-0.5">{env}</p>
                     </div>
                     <span className={`text-[10px] px-2 py-0.5 rounded-full ${
-                      status === 'configured'
+                      configured
                         ? 'bg-emerald/10 text-emerald'
-                        : 'bg-crimson/10 text-crimson'
+                        : 'bg-rose/10 text-rose'
                     }`}>
-                      {status}
+                      {configured ? 'configured' : 'missing'}
                     </span>
                   </div>
                 ))}

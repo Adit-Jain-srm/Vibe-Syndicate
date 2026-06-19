@@ -1,9 +1,11 @@
 import { BrowserRouter, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'motion/react';
-import { useEffect, useCallback, lazy, Suspense } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import AppRouter from './AppRouter';
 import NavigationRail from './components/constellation/NavigationRail';
-import { playSound } from './lib/sounds';
+import ErrorBoundary from './components/ErrorBoundary';
+import { ToastContainer } from './components/ui/Toast';
+import CommandPalette from './components/CommandPalette';
 import { useConstellationStore } from './stores/constellation';
 
 const AgentGraph = lazy(() => import('./components/constellation/AgentGraph'));
@@ -11,16 +13,6 @@ const AgentGraph = lazy(() => import('./components/constellation/AgentGraph'));
 function AppShell() {
   const { pathname } = useLocation();
   const initSubs = useConstellationStore(s => s.initRealtimeSubscriptions);
-
-  const handleFirstInteraction = useCallback(() => {
-    playSound('ambient');
-    document.removeEventListener('click', handleFirstInteraction);
-  }, []);
-
-  useEffect(() => {
-    document.addEventListener('click', handleFirstInteraction);
-    return () => document.removeEventListener('click', handleFirstInteraction);
-  }, [handleFirstInteraction]);
 
   useEffect(() => {
     const cleanup = initSubs();
@@ -31,8 +23,7 @@ function AppShell() {
   const isLanding = pathname === '/';
 
   return (
-    <div className="min-h-[100dvh] bg-void text-snow">
-      {/* Subtle 3D agent network graph background */}
+    <div className="min-h-[100dvh] bg-void text-snow page-atmo">
       <Suspense fallback={null}>
         <AgentGraph />
       </Suspense>
@@ -44,14 +35,19 @@ function AppShell() {
           <AppRouter key={pathname} />
         </AnimatePresence>
       </main>
+
+      <ToastContainer />
+      <CommandPalette />
     </div>
   );
 }
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AppShell />
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AppShell />
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }

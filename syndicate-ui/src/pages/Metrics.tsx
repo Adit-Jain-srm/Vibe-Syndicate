@@ -27,7 +27,7 @@ export default function Metrics() {
   useEffect(() => {
     Promise.all([
       api.getTaskMetrics(),
-      supabase.from('events').select('type,agent').then(({ data }) => data || []),
+      supabase.from('events').select('type,agent').limit(2000).then(({ data }) => data || []),
     ]).then(([metrics, evts]) => {
       setTaskMetrics(metrics);
       setEvents(evts);
@@ -65,7 +65,7 @@ export default function Metrics() {
 
   return (
     <PageTransition>
-      <div className="min-h-screen p-8 max-w-[1200px]">
+      <div className="min-h-screen p-6 md:p-8 max-w-[1400px]">
         <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
           <div className="flex items-center gap-3">
             <BarChart3 size={20} className="text-accent" />
@@ -80,22 +80,36 @@ export default function Metrics() {
           </div>
         ) : (
           <>
-            {/* KPI Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-10">
+            {/* KPI Bento — Hero metric + supporting stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">
+              {/* Hero metric - First Pass Rate */}
+              <motion.div initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.08 }} className="col-span-2 row-span-2">
+                <GlassPanel className="p-8 h-full relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-accent)]/5 to-transparent pointer-events-none" />
+                  <div className="relative">
+                    <div className="flex items-center gap-2 mb-3">
+                      <TrendingUp size={14} className="text-[var(--color-accent)]" />
+                      <p className="text-xs uppercase tracking-wider text-[var(--color-accent)]">First-Pass Rate</p>
+                    </div>
+                    <CountUp end={passRate} suffix="%" className="text-6xl font-light text-snow" duration={1500} />
+                    <p className="text-xs text-slate mt-3">Reviews passed without iteration across {completed} completed tasks</p>
+                  </div>
+                </GlassPanel>
+              </motion.div>
+              {/* Supporting stats */}
               {[
-                { l: 'Tasks Complete', v: completed, icon: Zap, c: '#34d399' },
-                { l: 'First-Pass Rate', v: passRate, s: '%', icon: TrendingUp, c: '#6b62f2' },
-                { l: 'Avg Iterations', v: avgIter, icon: BarChart3, c: '#06b6d4' },
-                { l: 'Avg Time (s)', v: avgTime, icon: Clock, c: '#fbbf24' },
-                { l: 'Total Tokens', v: totalTokens > 1000 ? Math.round(totalTokens / 1000) : totalTokens, s: totalTokens > 1000 ? 'k' : '', icon: Users, c: '#fb7185' },
+                { l: 'Completed', v: completed, icon: Zap, c: 'var(--color-emerald)' },
+                { l: 'Avg Iterations', v: avgIter, icon: BarChart3, c: 'var(--color-cyan)' },
+                { l: 'Avg Time', v: avgTime, s: 's', icon: Clock, c: 'var(--color-amber)' },
+                { l: 'Tokens Used', v: totalTokens > 1000 ? Math.round(totalTokens / 1000) : totalTokens, s: totalTokens > 1000 ? 'k' : '', icon: Users, c: 'var(--color-rose)' },
               ].map((k, i) => (
-                <motion.div key={k.l} initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: i * 0.08 }}>
-                  <GlassPanel className="p-6">
+                <motion.div key={k.l} initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.15 + i * 0.06 }}>
+                  <GlassPanel className="p-5 h-full">
                     <div className="flex items-center gap-1.5 mb-2">
                       <k.icon size={11} style={{ color: k.c }} />
-                      <p className="text-[10px] uppercase tracking-wider text-slate">{k.l}</p>
+                      <p className="text-[9px] uppercase tracking-wider text-slate">{k.l}</p>
                     </div>
-                    <CountUp end={k.v} suffix={k.s} className="text-3xl font-light" style={{ color: k.c }} duration={1500} />
+                    <CountUp end={k.v} suffix={k.s} className="text-2xl font-light" style={{ color: k.c }} duration={1200} />
                   </GlassPanel>
                 </motion.div>
               ))}
@@ -192,6 +206,57 @@ export default function Metrics() {
                 </div>
               </GlassPanel>
             </motion.div>
+
+            {/* Agent Leaderboard */}
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
+              <GlassPanel className="p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <TrendingUp size={14} className="text-emerald" />
+                  <h2 className="text-sm font-medium text-fog uppercase tracking-wider">Agent Leaderboard</h2>
+                </div>
+                <div className="space-y-3">
+                  {[...agentAct]
+                    .sort((a, b) => b.count - a.count)
+                    .map((a, i) => (
+                    <div key={a.role} className="flex items-center gap-3">
+                      <span className={`text-xs font-bold w-5 text-center ${i === 0 ? 'text-amber' : i === 1 ? 'text-slate' : i === 2 ? 'text-orange-400' : 'text-slate/50'}`}>
+                        {i + 1}
+                      </span>
+                      <div className="w-2 h-2 rounded-full shrink-0" style={{ background: AGENT_COLORS[a.role] }} />
+                      <span className="text-xs text-fog capitalize flex-1">{a.role}</span>
+                      <span className="text-xs font-mono text-slate">{a.count} actions</span>
+                    </div>
+                  ))}
+                </div>
+              </GlassPanel>
+            </motion.div>
+
+            {/* Cost Estimate */}
+            {totalTokens > 0 && (
+              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}>
+                <GlassPanel className="p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Clock size={14} className="text-cyan" />
+                    <h2 className="text-sm font-medium text-fog uppercase tracking-wider">Cost Estimate</h2>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-[10px] text-slate uppercase mb-1">Total Tokens</p>
+                      <p className="text-lg font-light text-fog">{totalTokens > 1000 ? `${(totalTokens / 1000).toFixed(1)}k` : totalTokens}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate uppercase mb-1">Gemini Cost</p>
+                      <p className="text-lg font-light text-cyan">${(totalTokens * 0.000001).toFixed(4)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate uppercase mb-1">GPT-4o Cost</p>
+                      <p className="text-lg font-light text-rose">${(totalTokens * 0.00001 * 0.2).toFixed(4)}</p>
+                    </div>
+                  </div>
+                  <p className="text-[9px] text-slate mt-3">Estimate based on token count. Gemini ~$0.001/1K, GPT-4o ~$0.01/1K (reviewer uses ~20% of tokens)</p>
+                </GlassPanel>
+              </motion.div>
+            )}
           </>
         )}
       </div>

@@ -65,6 +65,7 @@ class MemoryEngine:
             "category": category,
             "agent": agent,
             "tags": tags or [],
+            "status": "active",
         }
         if embedding:
             payload["embedding"] = embedding
@@ -164,6 +165,7 @@ class MemoryEngine:
                         "category": category,
                         "agent": agent,
                         "tags": tags,
+                        "status": "active",
                     },
                     timeout=5.0,
                 )

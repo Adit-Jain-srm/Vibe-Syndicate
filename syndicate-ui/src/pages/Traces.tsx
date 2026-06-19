@@ -97,7 +97,7 @@ function TraceSpan({
 
           {/* Timestamp */}
           <span className="text-[10px] text-slate font-mono whitespace-nowrap">
-            {event.timestamp ? new Date(event.timestamp).toLocaleTimeString() : '—'}
+            {(event.created_at || event.timestamp) ? new Date(event.created_at || event.timestamp).toLocaleTimeString() : '—'}
           </span>
 
           {/* Expand indicator */}
@@ -228,6 +228,14 @@ export default function Traces() {
 
         {/* Timeline */}
         <GlassPanel className="p-6">
+          {!loading && filtered.some(e => e.metadata?.source === 'simulation') && (
+            <div className="flex items-center gap-2 mb-4 px-1">
+              <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber/10 text-amber border border-amber/20 font-mono">
+                demo mode
+              </span>
+              <span className="text-[10px] text-slate">Some events are from simulation (swarm was offline)</span>
+            </div>
+          )}
           {loading ? (
             <div className="flex items-center justify-center py-12 gap-2 text-slate">
               <Loader2 size={16} className="animate-spin" />

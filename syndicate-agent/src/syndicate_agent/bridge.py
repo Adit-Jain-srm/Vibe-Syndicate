@@ -5,6 +5,7 @@ events to Supabase so the dashboard shows REAL collaboration data.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 
 import httpx
@@ -25,12 +26,15 @@ class EventBridge:
             "Authorization": f"Bearer {config.supabase_key}",
             "Content-Type": "application/json",
         }
-        self._current_task_id: str | None = None
+        self._active_task_ids: dict[str, str] = {}
         self._metrics_engine: object | None = None
         self._self_improve: object | None = None
         self._memory_engine: object | None = None
         self._nexus_api_key: str | None = None
         self._band_room_id: str | None = None
+        self._approval_watchers: dict[str, asyncio.Task] = {}
+        self._max_approval_watchers = 10
+        self._http_client: httpx.AsyncClient | None = None
 
     def set_metrics_engine(self, engine):
         """Inject metrics engine for post-completion computation."""
@@ -50,40 +54,54 @@ class EventBridge:
         self._band_room_id = room_id
         logger.info("Band routing configured: room %s", room_id[:8])
 
+    async def _get_client(self) -> httpx.AsyncClient:
+        """Return a shared httpx client for connection pooling."""
+        if self._http_client is None or self._http_client.is_closed:
+            self._http_client = httpx.AsyncClient(timeout=15.0)
+        return self._http_client
+
+    async def close(self):
+        """Close shared HTTP client and cancel watchers."""
+        if self._http_client and not self._http_client.is_closed:
+            await self._http_client.aclose()
+        for task in self._approval_watchers.values():
+            task.cancel()
+        self._approval_watchers.clear()
+
     async def on_task_received(self, description: str) -> str:
         """Called when Nexus receives a new task. Creates task in Supabase."""
         import uuid
 
         task_id = str(uuid.uuid4())
-        async with httpx.AsyncClient() as client:
-            try:
-                await client.post(
-                    f"{self.config.supabase_url}/rest/v1/tasks",
-                    headers={**self._headers, "Prefer": "resolution=merge-duplicates"},
-                    json={
-                        "id": task_id,
-                        "description": description,
-                        "status": TaskStatus.PENDING.value,
-                        "complexity": "medium",
-                    },
-                    timeout=5.0,
-                )
-                await self._emit_event(
-                    EventType.TASK_CREATED, "system", f"Task submitted: {description}", task_id
-                )
-            except Exception as e:
-                logger.warning("Failed to create task in Supabase: %s", e)
+        client = await self._get_client()
+        try:
+            await client.post(
+                f"{self.config.supabase_url}/rest/v1/tasks",
+                headers={**self._headers, "Prefer": "resolution=merge-duplicates"},
+                json={
+                    "id": task_id,
+                    "description": description,
+                    "status": TaskStatus.PENDING.value,
+                    "complexity": "medium",
+                },
+                timeout=5.0,
+            )
+            await self._emit_event(
+                EventType.TASK_CREATED, "system", f"Task submitted: {description}", task_id
+            )
+        except Exception as e:
+            logger.warning("Failed to create task in Supabase: %s", e)
 
-        self._current_task_id = task_id
         logger.info("Task received and stored: %s", task_id)
         return task_id
 
     async def on_agent_response(
         self, agent_role: str, message_content: str, room_id: str | None = None,
         model: str | None = None, reasoning: str | None = None, confidence: float | None = None,
+        task_id: str | None = None,
     ):
         """Called after an agent produces a response. Emits appropriate event with rich metadata."""
-        task_id = self._current_task_id or ""
+        resolved_task_id = task_id or ""
         event_type = self._classify_event(agent_role, message_content)
 
         await self.update_agent_status(agent_role, "active")
@@ -96,37 +114,35 @@ class EventBridge:
         if confidence is not None:
             metadata["confidence"] = confidence
 
-        await self._emit_event_with_metadata(event_type, agent_role, message_content[:500], task_id, metadata)
+        await self._emit_event_with_metadata(event_type, agent_role, message_content[:500], resolved_task_id, metadata)
 
-        # Update task status based on event
-        await self._update_task_status_from_event(event_type, task_id)
+        await self._update_task_status_from_event(event_type, resolved_task_id)
 
-        # Approval gates for multiple trigger conditions
-        if task_id:
-            await self._check_approval_triggers(event_type, agent_role, message_content, task_id)
+        if resolved_task_id:
+            await self._check_approval_triggers(event_type, agent_role, message_content, resolved_task_id)
 
-        logger.info("Event emitted: %s from %s (task: %s)", event_type.value, agent_role, task_id)
+        logger.info("Event emitted: %s from %s (task: %s)", event_type.value, agent_role, resolved_task_id)
 
     async def _emit_event_with_metadata(
         self, event_type: EventType, agent: str, content: str, task_id: str, metadata: dict
     ):
         """Write event to Supabase events table with full metadata."""
-        async with httpx.AsyncClient() as client:
-            try:
-                await client.post(
-                    f"{self.config.supabase_url}/rest/v1/events",
-                    headers=self._headers,
-                    json={
-                        "task_id": task_id if task_id else None,
-                        "type": event_type.value,
-                        "agent": agent,
-                        "content": content,
-                        "metadata": metadata,
-                    },
-                    timeout=15.0,
-                )
-            except Exception as e:
-                logger.warning("Failed to emit event: %s", e)
+        client = await self._get_client()
+        try:
+            await client.post(
+                f"{self.config.supabase_url}/rest/v1/events",
+                headers=self._headers,
+                json={
+                    "task_id": task_id if task_id else None,
+                    "type": event_type.value,
+                    "agent": agent,
+                    "content": content,
+                    "metadata": metadata,
+                },
+                timeout=15.0,
+            )
+        except Exception as e:
+            logger.warning("Failed to emit event: %s", e)
 
     async def _check_approval_triggers(
         self, event_type: EventType, agent_role: str, content: str, task_id: str
@@ -185,51 +201,45 @@ class EventBridge:
         await self.update_agent_status(role, "idle")
 
     async def run_heartbeat(self, agent_roles: list[str], interval: int = 30):
-        """Periodically update agent 'last_seen' to detect stale/crashed agents.
-        
-        Other agents not sending heartbeats within 2x interval are marked offline.
-        """
-        import asyncio
-
+        """Periodically update agent 'last_seen' to detect stale/crashed agents."""
         logger.info("Heartbeat system started for %d agents (interval: %ds)", len(agent_roles), interval)
         while True:
             try:
                 now = __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat()
-                async with httpx.AsyncClient() as client:
-                    for role in agent_roles:
-                        await client.patch(
-                            f"{self.config.supabase_url}/rest/v1/agents?role=eq.{role}",
-                            headers=self._headers,
-                            json={"last_seen": now},
-                            timeout=5.0,
-                        )
-                        await asyncio.sleep(0.2)
-
-                    # Check for stale agents (not seen in 2x interval)
-                    stale_threshold = __import__('datetime').datetime.now(
-                        __import__('datetime').timezone.utc
-                    ) - __import__('datetime').timedelta(seconds=interval * 2)
-                    resp = await client.get(
-                        f"{self.config.supabase_url}/rest/v1/agents?select=role,status,last_seen",
+                client = await self._get_client()
+                for role in agent_roles:
+                    await client.patch(
+                        f"{self.config.supabase_url}/rest/v1/agents?role=eq.{role}",
                         headers=self._headers,
+                        json={"last_seen": now},
                         timeout=5.0,
                     )
-                    if resp.status_code == 200:
-                        for agent in resp.json():
-                            last_seen = agent.get("last_seen")
-                            if last_seen and agent.get("status") != "offline":
-                                try:
-                                    seen_time = __import__('datetime').datetime.fromisoformat(last_seen.replace('Z', '+00:00'))
-                                    if seen_time < stale_threshold:
-                                        await client.patch(
-                                            f"{self.config.supabase_url}/rest/v1/agents?role=eq.{agent['role']}",
-                                            headers=self._headers,
-                                            json={"status": "offline"},
-                                            timeout=5.0,
-                                        )
-                                        logger.warning("Agent %s marked offline (last seen: %s)", agent["role"], last_seen)
-                                except (ValueError, TypeError):
-                                    pass
+                    await asyncio.sleep(0.2)
+
+                stale_threshold = __import__('datetime').datetime.now(
+                    __import__('datetime').timezone.utc
+                ) - __import__('datetime').timedelta(seconds=interval * 2)
+                resp = await client.get(
+                    f"{self.config.supabase_url}/rest/v1/agents?select=role,status,last_seen",
+                    headers=self._headers,
+                    timeout=5.0,
+                )
+                if resp.status_code == 200:
+                    for agent in resp.json():
+                        last_seen = agent.get("last_seen")
+                        if last_seen and agent.get("status") != "offline":
+                            try:
+                                seen_time = __import__('datetime').datetime.fromisoformat(last_seen.replace('Z', '+00:00'))
+                                if seen_time < stale_threshold:
+                                    await client.patch(
+                                        f"{self.config.supabase_url}/rest/v1/agents?role=eq.{agent['role']}",
+                                        headers=self._headers,
+                                        json={"status": "offline"},
+                                        timeout=5.0,
+                                    )
+                                    logger.warning("Agent %s marked offline (last seen: %s)", agent["role"], last_seen)
+                            except (ValueError, TypeError):
+                                pass
             except Exception as e:
                 logger.debug("Heartbeat error: %s", e)
 
@@ -295,75 +305,78 @@ class EventBridge:
         """
         import uuid as _uuid
         approval_id = str(_uuid.uuid4())
-        async with httpx.AsyncClient() as client:
-            try:
-                await client.post(
-                    f"{self.config.supabase_url}/rest/v1/approvals",
-                    headers=self._headers,
-                    json={
-                        "id": approval_id,
-                        "task_id": task_id,
-                        "type": "review_approval",
-                        "status": "pending",
-                        "title": f"Review flagged ({risk} risk)",
-                        "description": content[:500],
-                        "context": {"risk_keywords": self._extract_risk_keywords(content)},
-                        "agent": agent,
-                        "risk_level": risk,
-                    },
-                    timeout=5.0,
-                )
-                await client.patch(
-                    f"{self.config.supabase_url}/rest/v1/tasks?id=eq.{task_id}",
-                    headers=self._headers,
-                    json={"status": "awaiting_approval"},
-                    timeout=5.0,
-                )
+        client = await self._get_client()
+        try:
+            await client.post(
+                f"{self.config.supabase_url}/rest/v1/approvals",
+                headers=self._headers,
+                json={
+                    "id": approval_id,
+                    "task_id": task_id,
+                    "type": "review_approval",
+                    "status": "pending",
+                    "title": f"Review flagged ({risk} risk)",
+                    "description": content[:500],
+                    "context": {"risk_keywords": self._extract_risk_keywords(content)},
+                    "agent": agent,
+                    "risk_level": risk,
+                },
+                timeout=5.0,
+            )
+            await client.patch(
+                f"{self.config.supabase_url}/rest/v1/tasks?id=eq.{task_id}",
+                headers=self._headers,
+                json={"status": "awaiting_approval"},
+                timeout=5.0,
+            )
 
-                await self._emit_event(
-                    EventType.APPROVAL_NEEDED, agent,
-                    f"⚠️ Human approval required ({risk} risk): {content[:200]}",
-                    task_id,
-                )
+            await self._emit_event(
+                EventType.APPROVAL_NEEDED, agent,
+                f"⚠️ Human approval required ({risk} risk): {content[:200]}",
+                task_id,
+            )
 
-                # Send pause signal to Nexus via Band
-                await self._send_pause_signal(task_id, approval_id, risk)
+            await self._send_pause_signal(task_id, approval_id, risk)
 
-                logger.info("Approval gate created for task %s (risk: %s, id: %s)", task_id, risk, approval_id)
+            logger.info("Approval gate created for task %s (risk: %s, id: %s)", task_id, risk, approval_id)
 
-                # Start watching for resolution (non-blocking)
-                import asyncio
-                asyncio.create_task(self._watch_approval_resolution(approval_id, task_id))
+            # Bounded watcher: evict oldest if at capacity
+            if len(self._approval_watchers) >= self._max_approval_watchers:
+                oldest_key = next(iter(self._approval_watchers))
+                self._approval_watchers[oldest_key].cancel()
+                del self._approval_watchers[oldest_key]
 
-            except Exception as e:
-                logger.warning("Failed to create approval gate: %s", e)
+            watcher = asyncio.create_task(self._watch_approval_resolution(approval_id, task_id))
+            self._approval_watchers[approval_id] = watcher
+            watcher.add_done_callback(lambda _: self._approval_watchers.pop(approval_id, None))
+
+        except Exception as e:
+            logger.warning("Failed to create approval gate: %s", e)
 
     async def _send_pause_signal(self, task_id: str, approval_id: str, risk: str):
         """Send pause signal to Nexus agent via Band to halt processing."""
         if not self._nexus_api_key or not self._band_room_id:
             return
         try:
-            async with httpx.AsyncClient() as client:
-                await client.post(
-                    f"{self.config.band_rest_url}api/v1/agent/chats/{self._band_room_id}/messages",
-                    headers={
-                        "x-api-key": self._nexus_api_key,
-                        "Content-Type": "application/json",
-                    },
-                    json={
-                        "content": f"@Syndicate Nexus PAUSE: Task {task_id} requires human approval (risk: {risk}). Approval ID: {approval_id}. Do NOT continue processing this task until you receive a RESUME signal.",
-                    },
-                    timeout=10.0,
-                )
-                logger.info("Pause signal sent for task %s", task_id)
+            client = await self._get_client()
+            await client.post(
+                f"{self.config.band_rest_url}api/v1/agent/chats/{self._band_room_id}/messages",
+                headers={
+                    "x-api-key": self._nexus_api_key,
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "content": f"@Syndicate Nexus PAUSE: Task {task_id} requires human approval (risk: {risk}). Approval ID: {approval_id}. Do NOT continue processing this task until you receive a RESUME signal.",
+                },
+                timeout=10.0,
+            )
+            logger.info("Pause signal sent for task %s", task_id)
         except Exception as e:
             logger.warning("Failed to send pause signal: %s", e)
 
     async def _watch_approval_resolution(self, approval_id: str, task_id: str):
         """Watch for approval resolution and send resume signal when decided."""
-        import asyncio
-
-        timeout_seconds = 300  # 5 minute timeout
+        timeout_seconds = 300
         poll_interval = 3
         elapsed = 0
 
@@ -372,47 +385,48 @@ class EventBridge:
             elapsed += poll_interval
 
             try:
-                async with httpx.AsyncClient() as client:
-                    resp = await client.get(
-                        f"{self.config.supabase_url}/rest/v1/approvals?id=eq.{approval_id}&select=status,decided_by",
-                        headers=self._headers,
-                        timeout=5.0,
-                    )
-                    if resp.status_code == 200:
-                        data = resp.json()
-                        if data and data[0]["status"] != "pending":
-                            decision = data[0]["status"]
-                            decided_by = data[0].get("decided_by", "unknown")
-                            logger.info("Approval %s resolved: %s by %s", approval_id, decision, decided_by)
+                client = await self._get_client()
+                resp = await client.get(
+                    f"{self.config.supabase_url}/rest/v1/approvals?id=eq.{approval_id}&select=status,decided_by",
+                    headers=self._headers,
+                    timeout=5.0,
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if data and data[0]["status"] != "pending":
+                        decision = data[0]["status"]
+                        decided_by = data[0].get("decided_by", "unknown")
+                        logger.info("Approval %s resolved: %s by %s", approval_id, decision, decided_by)
 
-                            if decision == "approved":
-                                await self._send_resume_signal(task_id, decision)
-                            else:
-                                await self._emit_event(
-                                    EventType.APPROVAL_REJECTED, "user",
-                                    f"Task rejected by {decided_by}",
-                                    task_id,
-                                )
-                            return
+                        if decision == "approved":
+                            await self._send_resume_signal(task_id, decision)
+                        else:
+                            await self._emit_event(
+                                EventType.APPROVAL_REJECTED, "user",
+                                f"Task rejected by {decided_by}",
+                                task_id,
+                            )
+                        return
+            except asyncio.CancelledError:
+                return
             except Exception as e:
                 logger.debug("Approval watch poll error: %s", e)
 
-        # Timeout — auto-escalate
         logger.warning("Approval %s timed out after %ds — auto-rejecting", approval_id, timeout_seconds)
         try:
-            async with httpx.AsyncClient() as client:
-                await client.patch(
-                    f"{self.config.supabase_url}/rest/v1/approvals?id=eq.{approval_id}",
-                    headers=self._headers,
-                    json={"status": "rejected", "decided_by": "timeout", "decided_at": __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat()},
-                    timeout=5.0,
-                )
-                await client.patch(
-                    f"{self.config.supabase_url}/rest/v1/tasks?id=eq.{task_id}",
-                    headers=self._headers,
-                    json={"status": "failed"},
-                    timeout=5.0,
-                )
+            client = await self._get_client()
+            await client.patch(
+                f"{self.config.supabase_url}/rest/v1/approvals?id=eq.{approval_id}",
+                headers=self._headers,
+                json={"status": "rejected", "decided_by": "timeout", "decided_at": __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat()},
+                timeout=5.0,
+            )
+            await client.patch(
+                f"{self.config.supabase_url}/rest/v1/tasks?id=eq.{task_id}",
+                headers=self._headers,
+                json={"status": "failed"},
+                timeout=5.0,
+            )
         except Exception as e:
             logger.warning("Failed to update timeout status: %s", e)
         await self._emit_event(
@@ -426,31 +440,30 @@ class EventBridge:
         if not self._nexus_api_key or not self._band_room_id:
             return
         try:
-            async with httpx.AsyncClient() as client:
-                await client.post(
-                    f"{self.config.band_rest_url}api/v1/agent/chats/{self._band_room_id}/messages",
-                    headers={
-                        "x-api-key": self._nexus_api_key,
-                        "Content-Type": "application/json",
-                    },
-                    json={
-                        "content": f"@Syndicate Nexus RESUME: Task {task_id} has been {decision}. Continue processing.",
-                    },
-                    timeout=10.0,
-                )
-                # Also update task status back to in_progress
-                await client.patch(
-                    f"{self.config.supabase_url}/rest/v1/tasks?id=eq.{task_id}",
-                    headers=self._headers,
-                    json={"status": "in_progress"},
-                    timeout=5.0,
-                )
-                await self._emit_event(
-                    EventType.APPROVAL_GRANTED, "user",
-                    f"Approved — resuming task execution",
-                    task_id,
-                )
-                logger.info("Resume signal sent for task %s", task_id)
+            client = await self._get_client()
+            await client.post(
+                f"{self.config.band_rest_url}api/v1/agent/chats/{self._band_room_id}/messages",
+                headers={
+                    "x-api-key": self._nexus_api_key,
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "content": f"@Syndicate Nexus RESUME: Task {task_id} has been {decision}. Continue processing.",
+                },
+                timeout=10.0,
+            )
+            await client.patch(
+                f"{self.config.supabase_url}/rest/v1/tasks?id=eq.{task_id}",
+                headers=self._headers,
+                json={"status": "in_progress"},
+                timeout=5.0,
+            )
+            await self._emit_event(
+                EventType.APPROVAL_GRANTED, "user",
+                f"Approved — resuming task execution",
+                task_id,
+            )
+            logger.info("Resume signal sent for task %s", task_id)
         except Exception as e:
             logger.warning("Failed to send resume signal: %s", e)
 
@@ -471,16 +484,16 @@ class EventBridge:
 
     async def update_agent_status(self, role: str, status: str):
         """Update agent status in Supabase agents table."""
-        async with httpx.AsyncClient() as client:
-            try:
-                await client.patch(
-                    f"{self.config.supabase_url}/rest/v1/agents?role=eq.{role}",
-                    headers=self._headers,
-                    json={"status": status},
-                    timeout=15.0,
-                )
-            except Exception as e:
-                logger.warning("Failed to update agent status: %s", e)
+        client = await self._get_client()
+        try:
+            await client.patch(
+                f"{self.config.supabase_url}/rest/v1/agents?role=eq.{role}",
+                headers=self._headers,
+                json={"status": status},
+                timeout=15.0,
+            )
+        except Exception as e:
+            logger.warning("Failed to update agent status: %s", e)
 
     def _classify_event(self, agent_role: str, content: str) -> EventType:
         """Determine event type from agent role and response content."""
@@ -502,9 +515,9 @@ class EventBridge:
             return EventType.AGENT_THOUGHT
 
         if agent_role == "reviewer":
-            if any(kw in content_lower for kw in ["pass", "approved", "lgtm", "clean"]):
+            if any(kw in content_lower for kw in ["review passed", "passed", "approved", "lgtm", "clean", "no issues"]):
                 return EventType.REVIEW_PASSED
-            if any(kw in content_lower for kw in ["fail", "reject", "issue", "concern", "fix"]):
+            if any(kw in content_lower for kw in ["review failed", "failed", "reject", "must fix", "critical", "vulnerability"]):
                 return EventType.REVIEW_FAILED
             return EventType.REVIEW_STARTED
 
@@ -532,16 +545,16 @@ class EventBridge:
 
         new_status = status_map.get(event_type)
         if new_status:
-            async with httpx.AsyncClient() as client:
-                try:
-                    await client.patch(
-                        f"{self.config.supabase_url}/rest/v1/tasks?id=eq.{task_id}",
-                        headers=self._headers,
-                        json={"status": new_status.value},
-                        timeout=5.0,
-                    )
-                except Exception as e:
-                    logger.warning("Failed to update task status: %s", e)
+            client = await self._get_client()
+            try:
+                await client.patch(
+                    f"{self.config.supabase_url}/rest/v1/tasks?id=eq.{task_id}",
+                    headers=self._headers,
+                    json={"status": new_status.value},
+                    timeout=5.0,
+                )
+            except Exception as e:
+                logger.warning("Failed to update task status: %s", e)
 
         if event_type == EventType.TASK_COMPLETE and self._metrics_engine:
             try:
@@ -562,32 +575,29 @@ class EventBridge:
         self, event_type: EventType, agent: str, content: str, task_id: str
     ):
         """Write event to Supabase events table."""
-        async with httpx.AsyncClient() as client:
-            try:
-                await client.post(
-                    f"{self.config.supabase_url}/rest/v1/events",
-                    headers=self._headers,
-                    json={
-                        "task_id": task_id if task_id else None,
-                        "type": event_type.value,
-                        "agent": agent,
-                        "content": content,
-                        "metadata": {},
-                    },
-                    timeout=15.0,
-                )
-            except Exception as e:
-                logger.warning("Failed to emit event: %s", e)
+        client = await self._get_client()
+        try:
+            await client.post(
+                f"{self.config.supabase_url}/rest/v1/events",
+                headers=self._headers,
+                json={
+                    "task_id": task_id if task_id else None,
+                    "type": event_type.value,
+                    "agent": agent,
+                    "content": content,
+                    "metadata": {},
+                },
+                timeout=15.0,
+            )
+        except Exception as e:
+            logger.warning("Failed to emit event: %s", e)
 
     async def watch_for_tasks(self):
         """Poll Supabase for new pending tasks submitted from dashboard.
         
         Supports concurrent task processing with configurable parallelism.
-        Uses Supabase Realtime channel for instant pickup when available,
-        falls back to polling.
+        Skips tasks flagged as simulation-only via metadata.
         """
-        import asyncio
-
         logger.info("Task watcher started — polling for pending tasks")
         max_concurrent = 3
         active_tasks: set[str] = set()
@@ -598,23 +608,23 @@ class EventBridge:
                     await asyncio.sleep(2)
                     continue
 
-                async with httpx.AsyncClient() as client:
-                    limit = max_concurrent - len(active_tasks)
-                    resp = await client.get(
-                        f"{self.config.supabase_url}/rest/v1/tasks?status=eq.pending&order=created_at.asc&limit={limit}",
-                        headers=self._headers,
-                        timeout=5.0,
-                    )
-                    if resp.status_code == 200:
-                        tasks = resp.json()
-                        for task in tasks:
-                            task_id = task["id"]
-                            if task_id in active_tasks:
-                                continue
-                            active_tasks.add(task_id)
-                            asyncio.create_task(
-                                self._process_task(task, active_tasks)
-                            )
+                client = await self._get_client()
+                limit = max_concurrent - len(active_tasks)
+                resp = await client.get(
+                    f"{self.config.supabase_url}/rest/v1/tasks?status=eq.pending&order=created_at.asc&limit={limit}",
+                    headers=self._headers,
+                    timeout=5.0,
+                )
+                if resp.status_code == 200:
+                    tasks = resp.json()
+                    for task in tasks:
+                        task_id = task["id"]
+                        if task_id in active_tasks:
+                            continue
+                        active_tasks.add(task_id)
+                        asyncio.create_task(
+                            self._process_task(task, active_tasks)
+                        )
             except Exception as e:
                 logger.warning("Task watcher error: %s", e)
 
@@ -626,13 +636,13 @@ class EventBridge:
         try:
             logger.info("Picked up pending task: %s", task_id)
 
-            async with httpx.AsyncClient() as client:
-                await client.patch(
-                    f"{self.config.supabase_url}/rest/v1/tasks?id=eq.{task_id}",
-                    headers=self._headers,
-                    json={"status": "planning"},
-                    timeout=5.0,
-                )
+            client = await self._get_client()
+            await client.patch(
+                f"{self.config.supabase_url}/rest/v1/tasks?id=eq.{task_id}",
+                headers=self._headers,
+                json={"status": "planning"},
+                timeout=5.0,
+            )
 
             await self._emit_event(
                 EventType.AGENT_JOINED,
@@ -641,22 +651,19 @@ class EventBridge:
                 task_id,
             )
 
-            # Set current task for event routing (last-writer-wins for event classification)
-            self._current_task_id = task_id
-
             await self._send_to_nexus_via_band(task["description"], task_id)
             await self._query_relevant_memory(task["description"])
 
         except Exception as e:
             logger.warning("Task processing error for %s: %s", task_id, e)
             try:
-                async with httpx.AsyncClient() as client:
-                    await client.patch(
-                        f"{self.config.supabase_url}/rest/v1/tasks?id=eq.{task_id}",
-                        headers=self._headers,
-                        json={"status": "failed"},
-                        timeout=5.0,
-                    )
+                client = await self._get_client()
+                await client.patch(
+                    f"{self.config.supabase_url}/rest/v1/tasks?id=eq.{task_id}",
+                    headers=self._headers,
+                    json={"status": "failed"},
+                    timeout=5.0,
+                )
             except Exception:
                 pass
             await self._emit_event(
@@ -672,22 +679,22 @@ class EventBridge:
             return
 
         try:
-            async with httpx.AsyncClient() as client:
-                resp = await client.post(
-                    f"{self.config.band_rest_url}api/v1/agent/chats/{self._band_room_id}/messages",
-                    headers={
-                        "x-api-key": self._nexus_api_key,
-                        "Content-Type": "application/json",
-                    },
-                    json={
-                        "content": f"@Syndicate Nexus New task from dashboard (ID: {task_id}): {description}",
-                    },
-                    timeout=15.0,
-                )
-                if resp.status_code in (200, 201):
-                    logger.info("Task routed to Nexus via Band: %s", task_id)
-                else:
-                    logger.warning("Band message send failed (%d): %s", resp.status_code, resp.text[:200])
+            client = await self._get_client()
+            resp = await client.post(
+                f"{self.config.band_rest_url}api/v1/agent/chats/{self._band_room_id}/messages",
+                headers={
+                    "x-api-key": self._nexus_api_key,
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "content": f"@Syndicate Nexus New task from dashboard (ID: {task_id}): {description}",
+                },
+                timeout=15.0,
+            )
+            if resp.status_code in (200, 201):
+                logger.info("Task routed to Nexus via Band: %s", task_id)
+            else:
+                logger.warning("Band message send failed (%d): %s", resp.status_code, resp.text[:200])
         except Exception as e:
             logger.warning("Failed to route task to Band: %s", e)
 

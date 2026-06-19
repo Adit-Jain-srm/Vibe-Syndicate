@@ -130,9 +130,16 @@ export const api = {
   },
 
   isSwarmOnline: async (): Promise<boolean> => {
-    const { data } = await supabase.from('agents').select('status');
+    const { data } = await supabase.from('agents').select('status,last_seen');
     if (!data || data.length === 0) return false;
-    return data.some((a: { status: string }) => a.status === 'active');
+    const now = Date.now();
+    const STALE_THRESHOLD_MS = 90_000;
+    return data.some((a: { status: string; last_seen?: string }) => {
+      if (a.status === 'active') return true;
+      if (!a.last_seen) return false;
+      const seenAt = new Date(a.last_seen).getTime();
+      return (now - seenAt) < STALE_THRESHOLD_MS;
+    });
   },
 
   // Tasks
@@ -254,8 +261,22 @@ export const api = {
     if (error) throw error;
   },
 
-  getAgentMetrics: async (_name: string) => {
-    return { tasks_completed: 0, avg_review_score: 0 };
+  getAgentMetrics: async (name: string) => {
+    const { data: events } = await supabase
+      .from('events').select('type').eq('agent', name.toLowerCase());
+    const { data: metrics } = await supabase
+      .from('task_metrics').select('review_score,agents_involved');
+    const agentMetrics = (metrics || []).filter(
+      (m: { agents_involved: string[] }) => (m.agents_involved || []).includes(name.toLowerCase())
+    );
+    const avgScore = agentMetrics.length > 0
+      ? agentMetrics.reduce((s: number, m: { review_score: number }) => s + m.review_score, 0) / agentMetrics.length
+      : 0;
+    return {
+      tasks_completed: agentMetrics.length,
+      avg_review_score: Math.round(avgScore * 100) / 100,
+      total_events: (events || []).length,
+    };
   },
 
   subscribeToTask: subscribeToTaskEvents,
