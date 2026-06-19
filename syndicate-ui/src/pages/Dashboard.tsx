@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import AgentOrb from '../components/3d/AgentOrb';
 import { api } from '../lib/api';
 import { supabase } from '../lib/supabase';
 import type { Agent, Task } from '../lib/api';
@@ -128,42 +127,23 @@ export default function Dashboard() {
   return (
     <PageTransition>
     <div className="min-h-screen relative">
-      {/* Hero */}
+      {/* Header */}
       <motion.section
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ duration: 1.2 }}
-        className="relative h-[60vh] flex items-center justify-center overflow-hidden"
+        transition={{ duration: 0.6 }}
+        className="px-8 pt-12 pb-8 max-w-4xl mx-auto"
       >
-        {/* 3D Orb Background */}
-        <div className="absolute inset-0 opacity-60">
-          <AgentOrb color="#6366f1" speed={0.5} distort={0.3} size={2.5} />
-        </div>
-
-        {/* Hero Text */}
-        <div className="relative z-10 text-center px-8">
-          <motion.h1
-            initial={{ y: 30, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.3, duration: 0.8 }}
-            className="text-6xl md:text-8xl tracking-tight mb-4"
-            style={{ fontFamily: 'var(--font-display)' }}
-          >
-            Syndicate
-          </motion.h1>
-          <motion.p
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.6, duration: 0.8 }}
-            className="text-lg text-[var(--color-fog)] max-w-md mx-auto"
-          >
-            Compound intelligence that grows with you
-          </motion.p>
-        </div>
+        <h1 className="text-3xl md:text-4xl font-light tracking-tight text-[var(--color-snow)]">
+          Dashboard
+        </h1>
+        <p className="text-sm text-[var(--color-slate)] mt-2">
+          Submit tasks, monitor agents, track progress
+        </p>
       </motion.section>
 
       {/* Swarm Status */}
-      <div className="px-8 -mt-16 relative z-10 max-w-4xl mx-auto mb-6">
+      <div className="px-8 relative z-10 max-w-4xl mx-auto mb-6">
         <div className={`px-4 py-3 rounded-xl border ${agents.length > 0 ? 'border-[var(--color-emerald)]/30 bg-[var(--color-emerald)]/5' : 'border-[var(--color-rose)]/30 bg-[var(--color-rose)]/5'}`}>
           <div className="flex items-center gap-2">
             <div className={`w-2 h-2 rounded-full ${agents.length > 0 ? 'bg-[var(--color-emerald)] animate-pulse' : 'bg-[var(--color-rose)]'}`} />
@@ -187,9 +167,9 @@ export default function Dashboard() {
           ].map((stat, i) => (
             <motion.div
               key={stat.label}
-              initial={{ y: 40, opacity: 0 }}
+              initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.8 + i * 0.15, duration: 0.6 }}
+              transition={{ delay: 0.1 + i * 0.08, duration: 0.5 }}
               className="glass rounded-2xl p-6 glow-accent"
             >
               <p className="text-xs uppercase tracking-widest text-[var(--color-slate)] mb-2">{stat.label}</p>
@@ -200,14 +180,14 @@ export default function Dashboard() {
       </section>
 
       {/* Task Input */}
-      <section className="px-8 mt-12 max-w-4xl mx-auto">
+      <section className="px-8 mt-8 max-w-4xl mx-auto">
         <motion.div
-          initial={{ y: 30, opacity: 0 }}
+          initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 1.2, duration: 0.6 }}
+          transition={{ delay: 0.3, duration: 0.5 }}
           className="glass rounded-2xl p-8"
         >
-          <h2 className="text-xl mb-6" style={{ fontFamily: 'var(--font-display)' }}>
+          <h2 className="text-xl mb-6 text-[var(--color-snow)]">
             What shall we build?
           </h2>
           <div className="flex gap-4">
@@ -266,14 +246,13 @@ export default function Dashboard() {
         </motion.div>
       </section>
 
-      {/* Agent Orbs Grid */}
-      <section className="px-8 mt-16 max-w-6xl mx-auto">
+      {/* Agent Grid */}
+      <section className="px-8 mt-12 max-w-6xl mx-auto">
         <motion.h2
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 1.5 }}
-          className="text-2xl mb-8"
-          style={{ fontFamily: 'var(--font-display)' }}
+          transition={{ delay: 0.4 }}
+          className="text-xl mb-6 text-[var(--color-snow)]"
         >
           The Swarm
         </motion.h2>
@@ -285,9 +264,9 @@ export default function Dashboard() {
           ) : agents.map((agent, i) => (
             <motion.div
               key={agent.name}
-              initial={{ scale: 0.8, opacity: 0 }}
+              initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 1.8 + i * 0.1, type: 'spring' }}
+              transition={{ delay: 0.5 + i * 0.06, type: 'spring' }}
               className="glass rounded-2xl p-4 aspect-square flex flex-col items-center justify-center group hover:glow-accent transition-all duration-500"
             >
               <div
@@ -308,7 +287,7 @@ export default function Dashboard() {
       {/* Recent Tasks */}
       {tasks.length > 0 && (
         <section className="px-8 mt-16 max-w-4xl mx-auto pb-20">
-          <h2 className="text-xl mb-6" style={{ fontFamily: 'var(--font-display)' }}>Recent Work</h2>
+          <h2 className="text-xl mb-6 text-[var(--color-snow)]">Recent Work</h2>
           <div className="space-y-3">
             {tasks.slice(0, 5).map((task, i) => (
               <motion.div
@@ -316,17 +295,24 @@ export default function Dashboard() {
                 initial={{ x: -20, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 transition={{ delay: i * 0.1 }}
-                className="glass rounded-xl p-4 flex items-center justify-between group hover:border-[rgba(99,102,241,0.2)] transition-all"
+                className="glass rounded-xl p-4 group hover:border-[rgba(99,102,241,0.2)] transition-all"
               >
-                <div>
-                  <p className="text-sm text-[var(--color-snow)]">{task.description}</p>
-                  <p className="text-[10px] text-[var(--color-slate)] font-mono mt-1">{task.id}</p>
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-[var(--color-snow)] truncate">{task.description}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[10px] text-[var(--color-slate)] font-mono">{task.id.slice(0, 8)}</span>
+                      {task.result && <span className="text-[10px] text-[var(--color-emerald)]">{task.result.slice(0, 40)}</span>}
+                    </div>
+                  </div>
+                  <span className={`text-[10px] px-3 py-1 rounded-full font-mono shrink-0 ml-3 ${
+                    task.status === 'complete' ? 'bg-[rgba(52,211,153,0.1)] text-[var(--color-emerald)]' :
+                    task.status === 'failed' ? 'bg-[rgba(251,113,133,0.1)] text-[var(--color-rose)]' :
+                    task.status === 'awaiting_approval' ? 'bg-[rgba(251,191,36,0.1)] text-[var(--color-amber)]' :
+                    task.status === 'pending' ? 'bg-[rgba(99,102,241,0.1)] text-[var(--color-accent)]' :
+                    'bg-[rgba(98,102,109,0.1)] text-[var(--color-slate)]'
+                  }`}>{task.status.replace('_', ' ')}</span>
                 </div>
-                <span className={`text-[10px] px-3 py-1 rounded-full font-mono ${
-                  task.status === 'complete' ? 'bg-[rgba(52,211,153,0.1)] text-[var(--color-emerald)]' :
-                  task.status === 'pending' ? 'bg-[rgba(99,102,241,0.1)] text-[var(--color-accent)]' :
-                  'bg-[rgba(98,102,109,0.1)] text-[var(--color-slate)]'
-                }`}>{task.status}</span>
               </motion.div>
             ))}
           </div>
