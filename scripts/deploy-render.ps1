@@ -42,8 +42,8 @@ if (-not $renderApiKey) {
     Write-Host "3. Connect repo: Adit-Jain-srm/Vibe-Syndicate"
     Write-Host "4. When prompted for secret env vars, paste these values:"
     Write-Host ""
-    Write-Host "   AGENT_CONFIG_YAML_B64 = (recommended — single-line base64 of agent_config.yaml)"
-    Write-Host "   AGENT_CONFIG_YAML     = (alternative — paste full yaml contents)"
+    Write-Host "   AGENT_CONFIG_YAML_B64 = (recommended - single-line base64 of agent_config.yaml)"
+    Write-Host "   AGENT_CONFIG_YAML     = (alternative - paste full yaml contents)"
     Write-Host "   GOOGLE_API_KEY    = $($envVars['GOOGLE_API_KEY'].Substring(0, [Math]::Min(8, $envVars['GOOGLE_API_KEY'].Length)))..."
     Write-Host "   SUPABASE_URL      = $($envVars['SUPABASE_URL'])"
     Write-Host "   SUPABASE_KEY      = (service_role key from .env)"
@@ -57,24 +57,21 @@ if (-not $renderApiKey) {
 
     # Write env bundle for easy copy (local only, gitignored)
     $bundlePath = Join-Path $Root "render-env-bundle.txt"
-    @"
-# Paste these into Render dashboard Environment tab
-# DO NOT COMMIT THIS FILE
-
-AGENT_CONFIG_YAML_B64=$agentYamlB64
-
-# Alternative (multiline — use if B64 not supported):
-# AGENT_CONFIG_YAML:
-# $agentYaml
-
-GOOGLE_API_KEY=$($envVars['GOOGLE_API_KEY'])
-SUPABASE_URL=$($envVars['SUPABASE_URL'])
-SUPABASE_KEY=$($envVars['SUPABASE_KEY'])
-AZURE_OPENAI_ENDPOINT=$($envVars['AZURE_OPENAI_ENDPOINT'])
-AZURE_OPENAI_API_KEY=$($envVars['AZURE_OPENAI_API_KEY'])
-AZURE_OPENAI_DEPLOYMENT=$($envVars['AZURE_OPENAI_DEPLOYMENT'])
-AZURE_OPENAI_API_VERSION=$($envVars['AZURE_OPENAI_API_VERSION'])
-"@ | Set-Content $bundlePath -Encoding UTF8
+    $lines = @(
+        "# Paste these into Render dashboard Environment tab",
+        "# DO NOT COMMIT THIS FILE",
+        "",
+        "AGENT_CONFIG_YAML_B64=$agentYamlB64",
+        "",
+        "GOOGLE_API_KEY=$($envVars['GOOGLE_API_KEY'])",
+        "SUPABASE_URL=$($envVars['SUPABASE_URL'])",
+        "SUPABASE_KEY=$($envVars['SUPABASE_KEY'])",
+        "AZURE_OPENAI_ENDPOINT=$($envVars['AZURE_OPENAI_ENDPOINT'])",
+        "AZURE_OPENAI_API_KEY=$($envVars['AZURE_OPENAI_API_KEY'])",
+        "AZURE_OPENAI_DEPLOYMENT=$($envVars['AZURE_OPENAI_DEPLOYMENT'])",
+        "AZURE_OPENAI_API_VERSION=$($envVars['AZURE_OPENAI_API_VERSION'])"
+    )
+    $lines | Set-Content $bundlePath -Encoding UTF8
     Write-Host "Env reference written to render-env-bundle.txt (gitignored)" -ForegroundColor Green
     exit 0
 }
