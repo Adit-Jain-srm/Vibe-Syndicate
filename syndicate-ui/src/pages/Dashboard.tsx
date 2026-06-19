@@ -314,7 +314,7 @@ export default function Dashboard() {
                     : 'border-[var(--color-iron)] text-[var(--color-slate)] hover:text-[var(--color-fog)]'
                 }`}
               >
-                {level} {level === 'simple' ? '(3 agents)' : level === 'medium' ? '(5 agents)' : '(7 agents)'}
+                {level} {level === 'simple' ? '(quick)' : level === 'medium' ? '(standard)' : '(thorough)'}
               </button>
             ))}
             {suggestedComplexity && suggestedComplexity !== complexity && (
