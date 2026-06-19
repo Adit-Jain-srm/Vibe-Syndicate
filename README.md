@@ -28,12 +28,13 @@ Unlike existing AI tools that start fresh every session, Syndicate **accumulates
 ```mermaid
 flowchart TB
     subgraph user [User Surfaces]
-        MCP["MCP Server (9 tools)"]
+        MCP["MCP Server (11 tools)"]
         Dashboard["Web Dashboard"]
     end
 
     subgraph core [Core Engine]
         Nexus["Nexus (Conductor)"]
+        Bridge["EventBridge"]
         Memory["Memory Engine (pgvector)"]
         Metrics["Metrics Engine"]
         SelfImprove["Self-Improvement"]
@@ -51,8 +52,9 @@ flowchart TB
         QA_agent["QA (Gemini)"]
     end
 
-    MCP --> Nexus
-    Dashboard --> Nexus
+    MCP --> Bridge
+    Dashboard --> Bridge
+    Bridge --> Nexus
     Nexus --> Memory
     Nexus --> Metrics
     Nexus --> Rooms
@@ -122,7 +124,7 @@ python -m syndicate_agent.main
 
 ## MCP Tools (Cursor IDE Integration)
 
-The MCP server exposes 9 tools callable from Cursor. Configure in `.cursor/mcp.json`:
+The MCP server exposes 11 tools callable from Cursor. Configure in `.cursor/mcp.json`:
 
 ```json
 {
@@ -137,15 +139,17 @@ The MCP server exposes 9 tools callable from Cursor. Configure in `.cursor/mcp.j
 
 | Tool | Description |
 |------|-------------|
-| `syn_init` | Initialize Syndicate for a project (returns agent count + skill count) |
-| `syn_task` | Send a task to the swarm (creates in Supabase, bridge picks it up) |
+| `syn_init` | Initialize Syndicate for a project |
+| `syn_task` | Send a task to the swarm (writes to Supabase, bridge routes to Band) |
 | `syn_status` | Check agents, recent tasks, pending approvals |
 | `syn_review` | Request adversarial cross-model code review |
-| `syn_memory` | Query or store persistent project memory (with category filter) |
+| `syn_memory` | Query or store persistent project memory |
 | `syn_find_tool` | Search GitHub for cursor-skills repos |
-| `syn_install_skill` | Install a skill from GitHub into the project |
+| `syn_install_skill` | Install a skill from GitHub |
 | `syn_list_skills` | List all installed skills (77 detected) |
-| `syn_skill_info` | Read SKILL.md content of any installed skill |
+| `syn_skill_info` | Read SKILL.md of any installed skill |
+| `syn_approve` | Approve/reject HITL decisions from IDE |
+| `syn_events` | Get event timeline for any task |
 
 ## Tech Stack
 
@@ -157,7 +161,7 @@ The MCP server exposes 9 tools callable from Cursor. Configure in `.cursor/mcp.j
 | **Frontend** | React 19 + Vite 8 + TypeScript + Tailwind v4 + Zustand + Three.js |
 | **Auth** | [Clerk](https://clerk.com) - GitHub + Google + Microsoft OAuth |
 | **Database** | [Supabase](https://supabase.com) (PostgreSQL + pgvector + Realtime) |
-| **MCP** | Python MCP server (9 tools, JSON-RPC over stdio) |
+| **MCP** | Python MCP server (11 tools, JSON-RPC over stdio) |
 | **Deployment** | Vercel (frontend) + Supabase (DB) |
 
 ## Database Schema
@@ -206,7 +210,7 @@ Vibe-Syndicate/
 │   ├── src/components/          # UI components + 3D agent graph
 │   ├── src/stores/              # Zustand (Supabase Realtime -> state)
 │   └── src/lib/                 # API client, Supabase, sounds
-├── syndicate-mcp/               # MCP server (9 tools)
+├── syndicate-mcp/               # MCP server (11 tools)
 │   └── server.py                # JSON-RPC over stdio
 ├── tests/                       # 33 tests (unit + integration + E2E)
 ├── docs/                        # Architecture, hackathon, demo script
