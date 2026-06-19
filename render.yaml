@@ -1,0 +1,34 @@
+services:
+  - type: worker
+    name: syndicate-swarm
+    runtime: python
+    region: singapore
+    plan: free
+    buildCommand: pip install -r syndicate-agent/requirements.txt
+    startCommand: python -m syndicate_agent.main
+    rootDir: .
+    envVars:
+      - key: PYTHONPATH
+        value: syndicate-agent/src
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: AZURE_OPENAI_ENDPOINT
+        sync: false
+      - key: AZURE_OPENAI_API_KEY
+        sync: false
+      - key: AZURE_OPENAI_DEPLOYMENT
+        value: gpt-4o
+      - key: AZURE_OPENAI_API_VERSION
+        value: 2025-01-01-preview
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: BAND_ROOM_ID
+        value: 72a6f9a1-0841-40f6-bc90-a4fa64fe7e17
+      - key: BAND_WS_URL
+        value: wss://app.band.ai/api/v1/socket/websocket
+      - key: BAND_REST_URL
+        value: https://app.band.ai/

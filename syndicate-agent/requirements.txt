@@ -1,6 +1,6 @@
 band-sdk[langgraph]
-langchain-openai
-langgraph
-httpx
-python-dotenv
-pyyaml
+langchain-openai>=0.3.0
+langgraph>=0.4.0
+httpx>=0.27.0
+python-dotenv>=1.0.0
+pyyaml>=6.0
