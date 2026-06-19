@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from pathlib import Path
 
 import yaml
@@ -184,6 +185,12 @@ async def run_swarm():
     bridge.set_metrics_engine(metrics_engine)
     bridge.set_self_improve(self_improve)
     bridge.set_memory_engine(memory_engine)
+
+    # Configure Band routing: bridge sends tasks directly to Nexus via Band REST API
+    nexus_creds = config.get("nexus", {})
+    band_room_id = os.environ.get("BAND_ROOM_ID", "72a6f9a1-0841-40f6-bc90-a4fa64fe7e17")
+    if nexus_creds.get("api_key"):
+        bridge.set_band_routing(nexus_creds["api_key"], band_room_id)
 
     import syndicate_agent
     syndicate_agent._orchestrator = orchestrator

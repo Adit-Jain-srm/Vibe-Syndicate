@@ -29,6 +29,8 @@ class EventBridge:
         self._metrics_engine: object | None = None
         self._self_improve: object | None = None
         self._memory_engine: object | None = None
+        self._nexus_api_key: str | None = None
+        self._band_room_id: str | None = None
 
     def set_metrics_engine(self, engine):
         """Inject metrics engine for post-completion computation."""
@@ -41,6 +43,12 @@ class EventBridge:
     def set_memory_engine(self, engine):
         """Inject memory engine for semantic pre-task context retrieval."""
         self._memory_engine = engine
+
+    def set_band_routing(self, nexus_api_key: str, room_id: str):
+        """Configure Band routing so bridge can send tasks directly to Nexus."""
+        self._nexus_api_key = nexus_api_key
+        self._band_room_id = room_id
+        logger.info("Band routing configured: room %s", room_id[:8])
 
     async def on_task_received(self, description: str) -> str:
         """Called when Nexus receives a new task. Creates task in Supabase."""
@@ -280,12 +288,40 @@ class EventBridge:
                                 f"Nexus picking up task: {task['description'][:100]}",
                                 task["id"],
                             )
+                            # Route to Nexus via Band
+                            await self._send_to_nexus_via_band(task["description"], task["id"])
                             # Query semantic memory for relevant context
                             await self._query_relevant_memory(task["description"])
             except Exception as e:
                 logger.warning("Task watcher error: %s", e)
 
             await asyncio.sleep(5)
+
+    async def _send_to_nexus_via_band(self, description: str, task_id: str):
+        """Send task to Nexus agent via Band REST API (creates real agent-to-agent routing)."""
+        if not self._nexus_api_key or not self._band_room_id:
+            logger.debug("Band routing skipped: no nexus credentials or room ID configured")
+            return
+
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(
+                    f"{self.config.band_rest_url}api/v1/agent/chats/{self._band_room_id}/messages",
+                    headers={
+                        "x-api-key": self._nexus_api_key,
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "content": f"@Syndicate Nexus New task from dashboard (ID: {task_id}): {description}",
+                    },
+                    timeout=15.0,
+                )
+                if resp.status_code in (200, 201):
+                    logger.info("Task routed to Nexus via Band: %s", task_id)
+                else:
+                    logger.warning("Band message send failed (%d): %s", resp.status_code, resp.text[:200])
+        except Exception as e:
+            logger.warning("Failed to route task to Band: %s", e)
 
     async def _query_relevant_memory(self, description: str):
         """Query semantic memory for past learnings relevant to the current task."""
