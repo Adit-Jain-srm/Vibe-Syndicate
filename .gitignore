@@ -5,6 +5,7 @@
 .env.*
 !.env.example
 agent_config.yaml
+render-env-bundle.txt
 docs/CREDENTIALS.md
 __pycache__/
 *.pyc

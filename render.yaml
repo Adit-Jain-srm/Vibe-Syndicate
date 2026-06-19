@@ -1,17 +1,22 @@
 services:
-  - type: worker
+  - type: web
     name: syndicate-swarm
     runtime: python
     region: singapore
     plan: free
+    branch: main
     buildCommand: pip install -r syndicate-agent/requirements.txt
     startCommand: python -m syndicate_agent.main
-    rootDir: .
+    healthCheckPath: /
     envVars:
       - key: PYTHONPATH
         value: syndicate-agent/src
+      - key: PYTHON_VERSION
+        value: 3.12.0
       - key: PYTHONUNBUFFERED
         value: "1"
+      - key: AGENT_CONFIG_YAML
+        sync: false
       - key: GOOGLE_API_KEY
         sync: false
       - key: AZURE_OPENAI_ENDPOINT

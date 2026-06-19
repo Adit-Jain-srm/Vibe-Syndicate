@@ -21,10 +21,53 @@ logger = logging.getLogger("syndicate")
 
 
 def _load_config() -> dict[str, dict[str, str]]:
-    """Load agent credentials from agent_config.yaml."""
-    config_path = Path(__file__).resolve().parent.parent.parent.parent / "agent_config.yaml"
-    with open(config_path) as f:
-        return {k: v for k, v in yaml.safe_load(f).items() if v.get("agent_id") and v.get("api_key")}
+    """Load agent credentials from AGENT_CONFIG_YAML env or agent_config.yaml file."""
+    yaml_content = os.environ.get("AGENT_CONFIG_YAML")
+    if yaml_content:
+        data = yaml.safe_load(yaml_content) or {}
+    else:
+        candidates = [
+            Path(__file__).resolve().parent.parent.parent.parent / "agent_config.yaml",
+            Path.cwd() / "agent_config.yaml",
+        ]
+        config_path = next((p for p in candidates if p.exists()), None)
+        if not config_path:
+            logger.error(
+                "No agent config found — set AGENT_CONFIG_YAML env var or create agent_config.yaml"
+            )
+            return {}
+        with open(config_path, encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+
+    return {
+        k: v
+        for k, v in data.items()
+        if isinstance(v, dict) and v.get("agent_id") and v.get("api_key")
+    }
+
+
+def _start_health_server() -> None:
+    """Expose a minimal HTTP health check when PORT is set (Render/Railway web services)."""
+    port = os.environ.get("PORT")
+    if not port:
+        return
+
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    import threading
+
+    class HealthHandler(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain")
+            self.end_headers()
+            self.wfile.write(b"Syndicate swarm OK\n")
+
+        def log_message(self, *_args) -> None:
+            pass
+
+    server = HTTPServer(("0.0.0.0", int(port)), HealthHandler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    logger.info("Health server listening on 0.0.0.0:%s", port)
 
 
 def _load_prompt(role: str) -> str:
@@ -161,6 +204,7 @@ async def run_specialist(role: str, config: dict[str, dict[str, str]]) -> None:
 async def run_swarm():
     """Run all configured agents in the swarm concurrently."""
     load_dotenv()
+    _start_health_server()
     config = _load_config()
 
     if not config:

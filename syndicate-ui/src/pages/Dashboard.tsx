@@ -234,23 +234,17 @@ export default function Dashboard() {
         </motion.div>
       )}
 
-      {/* Swarm Status */}
-      <div className="px-8 relative z-10 max-w-4xl mx-auto mb-6">
-        <div className={`px-4 py-3 rounded-xl border ${swarmLive ? 'border-[var(--color-emerald)]/30 bg-[var(--color-emerald)]/5' : 'border-[var(--color-rose)]/30 bg-[var(--color-rose)]/5'}`}>
-          <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${swarmLive ? 'bg-[var(--color-emerald)] animate-pulse' : 'bg-[var(--color-rose)]'}`} />
-            <span className="text-sm">
-              {swarmLive
-                ? `Swarm online — agents responding`
-                : 'Swarm offline — tasks will run in demo mode'
-              }
-            </span>
-            {!swarmLive && (
-              <span className="text-[10px] text-[var(--color-slate)] ml-auto font-mono">run: python -m syndicate_agent.main</span>
-            )}
+      {/* Swarm Status — only shown when live */}
+      {swarmLive && (
+        <div className="px-8 relative z-10 max-w-4xl mx-auto mb-6">
+          <div className="px-4 py-3 rounded-xl border border-[var(--color-emerald)]/30 bg-[var(--color-emerald)]/5">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-[var(--color-emerald)] animate-pulse" />
+              <span className="text-sm">Swarm online — agents responding</span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Stats Bento */}
       <section className="px-8 relative z-10">
@@ -420,7 +414,7 @@ export default function Dashboard() {
         </motion.h2>
         {agents.length === 0 ? (
           <div className="text-center py-12 text-[var(--color-slate)] text-sm border border-dashed border-[var(--color-graphite)] rounded-xl">
-            Swarm offline
+            No agents loaded
           </div>
         ) : (
           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
