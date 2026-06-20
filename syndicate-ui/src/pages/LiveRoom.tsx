@@ -1,5 +1,5 @@
-import { useEffect, useState, useRef } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { useEffect, useMemo, useState, useRef } from 'react';
+import { motion } from 'motion/react';
 import { Radio, Wifi, WifiOff } from 'lucide-react';
 import { api } from '../lib/api';
 import type { TaskEvent } from '../lib/api';
@@ -31,7 +31,11 @@ export default function LiveRoom() {
   const [connected, setConnected] = useState(false);
   const [showAll, setShowAll] = useState(true);
   const feedRef = useRef<HTMLDivElement>(null);
-  const activeAgents = useConstellationStore(s => s.agents.filter(a => a.status === 'active'));
+  const agents = useConstellationStore(s => s.agents);
+  const activeRoles = useMemo(
+    () => agents.filter(a => a.status === 'active').map(a => a.role),
+    [agents],
+  );
 
   // Load recent events on mount (show all mode)
   useEffect(() => {
@@ -243,12 +247,14 @@ export default function LiveRoom() {
                   </div>
                 ))}
 
-              {/* Typing indicators for active agents */}
-              <AnimatePresence>
-                {activeAgents.map(a => (
-                  <TypingIndicator key={a.role} agentName={a.role} color={AGENT_COLORS_HEX[a.role] || '#8a8f98'} />
-                ))}
-              </AnimatePresence>
+              {activeRoles.map(role => (
+                <TypingIndicator
+                  key={role}
+                  agentName={role}
+                  color={AGENT_COLORS_HEX[role] || '#8a8f98'}
+                />
+              ))}
+
             </div>
 
             {/* ── Event count ──────────────────────── */}
