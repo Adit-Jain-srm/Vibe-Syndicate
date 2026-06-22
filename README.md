@@ -328,7 +328,7 @@ Vibe-Syndicate/
 │   └── server.py
 ├── syndicate-api/             # Optional FastAPI layer + shared migrations
 ├── tests/                     # 73 pytest tests (unit + integration + E2E)
-├── docs/                      # Architecture, demo script, hackathon brief
+├── docs/                      # Architecture, demo script
 ├── memory/                    # Local JSONL memory (protocol, project, agent)
 ├── render.yaml                # Render Blueprint (free web service)
 ├── vercel.json                # Vercel monorepo config (syndicate-ui/)
@@ -391,21 +391,10 @@ cd syndicate-ui && npm run typecheck
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design, component map, design decisions |
 | [docs/BAND-SDK-REFERENCE.md](docs/BAND-SDK-REFERENCE.md) | Band SDK tool names and patterns |
 | [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) | 5-minute demo walkthrough |
-| [docs/HACKATHON-BRIEF.md](docs/HACKATHON-BRIEF.md) | Hackathon requirements and strategy |
 | [AGENTS.md](AGENTS.md) | Project identity, ADRs, session log |
 | [CHANGELOG.md](CHANGELOG.md) | Version history |
 
 In-app docs are also available at `/docs` in the dashboard.
-
----
-
-## Hackathon
-
-Built for the **Band of Agents Hackathon** (June 2026) — [lablab.ai](https://lablab.ai/ai-hackathons/band-of-agents-hackathon)
-
-- **Track:** Multi-Agent Software Development
-- **Requirement:** 3+ agents through Band — Syndicate ships 6
-- **Differentiators:** Self-improving agents, cross-model review, compound memory, MCP IDE integration, production-grade dashboard
 
 ---
 
